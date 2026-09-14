@@ -162,9 +162,10 @@ class usuario{
         std::vector <cartao_de_credito> cartoes_cadastrados;
     protected:
         std::string nome;
-        int jogos_na_biblioteca = 0;
-        std::vector <jogos_gratuitos> jogos_gratis;
-        std::vector <jogos_pagos> jogos_comprados;
+        int jogos_instalados = 0;
+        int jogos_comprados = 0;
+        std::vector <jogos_gratuitos*> jogos_gratis;
+        std::vector <jogos_pagos*> jogos_comprados;
     public:
 
         usuario(std::string nick, long numero, std::string password){
@@ -202,9 +203,29 @@ class usuario{
             }
             else{
                 std::cout << "Formato de pagamento invalido" << std::endl;
-            }
+            };
 
-        }
+        };
+
+        void installar(jogos_gratuitos& jogo){
+            jogos_gratis.emplace_back(&jogo);
+            std::cout << "O jogo: " << jogo.GetTitulo() << " Foi instalado com sucesso." << std::endl;
+        };
+
+        void desintallar(std::string titulo){
+            bool existe = false;
+            for(int i = 0; i < jogos_instalados; i++){
+                if((*jogos_gratis[i]).GetTitulo() == titulo){
+                    jogos_gratis.erase(jogos_gratis.begin() + i);
+                    std::cout << "O jogo: " << titulo << " foi desinstalado com sucesso." << std::endl;
+                    existe = true;
+                    break;
+                };
+            };
+            if(existe == false){
+                std::cout << "O jogo: " << titulo << " não está instalado ou não existe na biblioteca." << std::endl;
+            };
+        };
 
 
 
