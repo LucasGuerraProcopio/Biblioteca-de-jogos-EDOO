@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 
 class jogos_gratuitos{
     private:
@@ -105,7 +106,7 @@ class jogos_gratuitos{
                 }
                 else{
                     std::cout << "O jogo: " << titulo << " foi reembolsado" << std::endl;  
-                    comprado = true;              
+                    comprado = false;              
                 };
             };
 
@@ -117,7 +118,99 @@ class jogos_gratuitos{
                 return comprado;
             };
 
+
     };
+
+class cartao_de_credito{
+    private:
+        long numero_do_cartao;
+        int cvc;
+        std::string validade;
+        double limite;
+        double gastos = 0;
+    public:
+
+        cartao_de_credito(long numero, int vcv, std::string tempo, double dinheiro){
+            this->numero_do_cartao = numero;
+            this->cvc = vcv;
+            this->validade = tempo;
+            this->limite = dinheiro;
+        };
+
+        ~cartao_de_credito(){
+            std::cout << "Esse cartão não está mais registrado na biblioteca de jogos." << std::endl;
+        };
+
+        void gastar(double valor){
+            if((gastos + valor) > limite ){
+                std::cout << "Você ultrapassou seu limite, compra negada" << std::endl;
+            }
+            else{
+                gastos += valor;
+                std::cout << "Compra aprovada no valor de: " << valor << "\n Gastos totais com esse cartão na biblioteca de jogos: " << valor << std::endl;
+            };
+        };
+
+};
+
+
+class usuario{
+    private:
+        std::string senha;
+        long numero_de_usuário;
+        double saldo = 0;
+        std::vector <cartao_de_credito> cartoes_cadastrados;
+    protected:
+        std::string nome;
+        int jogos_na_biblioteca = 0;
+        std::vector <jogos_gratuitos> jogos_gratis;
+        std::vector <jogos_pagos> jogos_comprados;
+    public:
+
+        usuario(std::string nick, long numero, std::string password){
+            this->nome = nick;
+            this->numero_de_usuário = numero;
+            this->senha = password;
+            std::cout << "Seja bem vindo a nossa biblioteca de jogos." << std::endl;
+        };
+
+        ~usuario(){
+            std::cout << "Usuário deletado da biblioteca de jogos." <<  std::endl;
+        };
+
+        void SetNome(std::string nick){
+            this->nome = nick;
+            std::cout << "Seu nome foi alterado para: " << nick << std::endl;
+        };
+
+        std::string Getnome(){
+            return nome;
+        };
+
+        void ColocarSaldo(int valor, std::string forma, std::string codigo = 0){
+            if(forma == "pix"){
+                saldo += valor;
+            }
+            else if(forma == "gift card"){
+                if(codigo.length() == 12){
+                    saldo += valor;
+                    std::cout << "Um gift card no valor de: " << valor << "reais foi adicionado ao seu saldo" << std::endl;
+                }
+                else{
+                    std::cout << "Código de gift card inválido" << std::endl;
+                };
+            }
+            else{
+                std::cout << "Formato de pagamento invalido" << std::endl;
+            }
+
+        }
+
+
+
+};
+
+
 
 int main(){
     jogos_gratuitos Fortinite("Fortinite", 90, "Torres_tortas", "Embananado123");
@@ -129,7 +222,7 @@ int main(){
     jogos_pagos MK("Mortal Kombat", 80, "Get over here", 200);
     jogos_pagos Fifa("FC 26", 80, "Futebol123", 500);
     jogos_pagos Gta("Grand Theft Auto 6", 220, "Rockstar mercenaria", 550, "CJ");
-}
+};
 
 
 
