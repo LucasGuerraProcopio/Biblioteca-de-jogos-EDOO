@@ -55,12 +55,53 @@
     // Classe do pix
     class pix 
     {
+        private:
+            string chave_pix;
+            double taxa_da_biblioteca = 0.02;
+        public:
 
+            pix(string chave = "46302855752", double taxa = 0.02){
+                this->chave_pix = chave;
+                this->taxa_da_biblioteca = taxa;
+            };
+
+           string GetChave(){
+            return chave_pix;
+           };
+
+           void SetTaxa(double nova_taxa){
+            this->taxa_da_biblioteca = nova_taxa;
+           };
+
+           double GetTaxa(){
+            return taxa_da_biblioteca;
+           };
     };
 
 
     // Classe do gift card
     class gift_card
     {
+        private:
+            string codigo;
+            double valor;
+            bool valido = true;
+        public:
 
+            gift_card(string numero, double dinheiro){
+                this->codigo = numero;
+                this->valor = dinheiro;
+            };
+
+            string GetCodigo(){
+                return codigo;
+            };
+
+            double GetValor(){
+                return valor;
+            };
+
+            void GiftCardRegistrado(){
+                this->valido = false;
+            };
     };

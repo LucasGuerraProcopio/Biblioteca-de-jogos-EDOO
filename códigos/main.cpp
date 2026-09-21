@@ -3,15 +3,19 @@
 #include <vector>
 #include "tipos_jogos.hpp"
 #include "metodos_pagamento.hpp"
-#include "ins_e_del.hpp"
 using namespace std;
 
 // Classe do usuario 
-class usuario : public acoes_jogos
+class usuario 
 {
     // Informações da conta
     protected:
         string nome_conta;
+        int total_jogos_instalados = 0; 
+        int total_jogos_comprados = 0;
+        vector <jogos_gratuitos*> jogos_gratis; // Listas dos jogos que guarda PONTEIROS para os objetos
+        vector <jogos_pagos*> jogos_comprados;
+        pix pix_da_biblioteca;
 
 
     // Login e saldo da conta
@@ -66,12 +70,27 @@ class usuario : public acoes_jogos
         };
 
 
-        // Saldo da conta
-        void depositar(double valor_deposito)
-        {
-            this->saldo += valor_deposito;
-            cout << "Depósito de: " << valor_deposito << " realizado. Saldo atual: " << saldo << endl;
+        // Função para depositar dinheiro, vai haver outra de deposito que funcione cartão, mas esse metodo não vai aceitar cartão.
+        void depositar_pix(double valor, string codigo){
+            if(codigo == pix_da_biblioteca.GetChave()){
+                this->saldo += valor;
+                cout << "Um depósito no valor de: " << valor << " reais foi feito na sua conta via pix" << endl;
+            }
+            else{
+                cout << "Chave pix inválida";
+            };
+            };
+
+        void Cadastrar_GiftCard(gift_card novo_card, string codigo){
+            if(novo_card.GetCodigo() == codigo){
+                saldo += novo_card.GetValor();
+                novo_card.GiftCardRegistrado();                
+            }
+            else{
+                cout << "Codigo de Gift card inválido" << endl;
+            };
         };
+
         double GetSaldo()
         {
             return saldo;
@@ -83,6 +102,47 @@ class usuario : public acoes_jogos
         {
             cartoes_cadastrados.emplace_back(novo_cartao);
             cout << "Cartão cadastrado com sucesso." << endl;
+        };
+
+        void installar(jogos_gratuitos& jogo)
+        {
+            jogos_pagos* jogo_pago = dynamic_cast<jogos_pagos*>(&jogo);
+
+            if(jogo_pago != nullptr)
+            {
+                jogo_pago->comprar();
+                jogos_comprados.emplace_back(jogo_pago);
+                total_jogos_comprados++;
+            }
+            else
+            {
+                jogos_gratis.emplace_back(&jogo);
+                total_jogos_instalados++;
+            };
+
+            cout << "O jogo: " << jogo.GetTitulo() << " Foi instalado com sucesso." << endl;
+        };
+
+        void desintallar(string titulo_jogo)
+        {
+            bool jogo_existe = false;
+
+            for(int i = 0; i < jogos_gratis.size(); i++)
+            {
+                if((*jogos_gratis[i]).GetTitulo() == titulo_jogo)
+                {
+                    jogos_gratis.erase(jogos_gratis.begin() + i);
+                    total_jogos_instalados--;
+                    cout << "O jogo: " << titulo_jogo << " foi desinstalado com sucesso." << endl;
+                    jogo_existe = true;
+                    break;
+                };
+            };
+
+            if(jogo_existe == false)
+            {
+                cout << "O jogo: " << titulo_jogo << " não está instalado ou não existe na biblioteca." << endl;
+            };
         };
 
 };
