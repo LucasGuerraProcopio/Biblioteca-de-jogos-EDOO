@@ -19,7 +19,7 @@
         // Operaçoes com o cartão de credito
         public:
             // Construtor do novo cartão de credito
-            cartao_de_credito(long numero_credito_novo, int cvc_credito_novo, string validade_credito_novo, double limite_credito_novo)
+            cartao_de_credito(string numero_credito_novo, int cvc_credito_novo, string validade_credito_novo, double limite_credito_novo)
             {
                 this->numero_credito = numero_credito_novo;
                 this->cvc_credito = cvc_credito_novo;

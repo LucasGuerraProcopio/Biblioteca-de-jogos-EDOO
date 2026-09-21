@@ -3,18 +3,15 @@
 #include <vector>
 #include "tipos_jogos.hpp"
 #include "metodos_pagamento.hpp"
+#include "ins_e_del.hpp"
 using namespace std;
 
 // Classe do usuario 
-class usuario
+class usuario : public acoes_jogos
 {
     // Informações da conta
     protected:
         string nome_conta;
-        int total_jogos_instalados = 0; 
-        int total_jogos_comprados = 0;
-        vector <jogos_gratuitos*> jogos_gratis; // Listas dos jogos que guarda PONTEIROS para os objetos
-        vector <jogos_pagos*> jogos_comprados;
 
 
     // Login e saldo da conta
@@ -57,59 +54,35 @@ class usuario
         };
 
 
-        // Instalar e desinstalar os jogos
-        void installar(jogos_gratuitos& jogo)
+        // Senha da conta
+        void SetSenha(string nova_senha)
         {
-            jogos_pagos* jogo_pago = dynamic_cast<jogos_pagos*>(&jogo);
-
-            if(jogo_pago != nullptr)
-            {
-                jogos_comprados.emplace_back(jogo_pago);
-                total_jogos_comprados++;
-            }
-            else
-            {
-                jogos_gratis.emplace_back(&jogo);
-                total_jogos_instalados++;
-            };
-
-            cout << "O jogo: " << jogo.GetTitulo() << " Foi instalado com sucesso." << endl;
+            this->senha_conta = nova_senha;
+            cout << "Sua senha foi alterada com sucesso." << endl;
         };
-        void desintallar(string titulo_jogo)
+        string GetSenha()
         {
-            bool jogo_existe = false;
+            return senha_conta;
+        };
 
-            for(int i = 0; i < jogos_gratis.size(); i++)
-            {
-                if((*jogos_gratis[i]).GetTitulo() == titulo_jogo)
-                {
-                    jogos_gratis.erase(jogos_gratis.begin() + i);
-                    total_jogos_instalados--;
-                    cout << "O jogo: " << titulo_jogo << " foi desinstalado com sucesso." << endl;
-                    jogo_existe = true;
-                    break;
-                };
-            };
 
-            if(jogo_existe == false)
-            {
-                for(int i = 0; i < jogos_comprados.size(); i++)
-                {
-                    if((*jogos_comprados[i]).GetTitulo() == titulo_jogo)
-                    {
-                        jogos_comprados.erase(jogos_comprados.begin() + i);
-                        total_jogos_comprados--;
-                        cout << "O jogo: " << titulo_jogo << " foi desinstalado com sucesso." << endl;
-                        jogo_existe = true;
-                        break;
-                    };
-                };
-            };
+        // Saldo da conta
+        void depositar(double valor_deposito)
+        {
+            this->saldo += valor_deposito;
+            cout << "Depósito de: " << valor_deposito << " realizado. Saldo atual: " << saldo << endl;
+        };
+        double GetSaldo()
+        {
+            return saldo;
+        };
 
-            if(jogo_existe == false)
-            {
-                cout << "O jogo: " << titulo_jogo << " não está instalado ou não existe na biblioteca." << endl;
-            };
+
+        // Cartões cadastrados
+        void adicionar_cartao(cartao_de_credito novo_cartao)
+        {
+            cartoes_cadastrados.emplace_back(novo_cartao);
+            cout << "Cartão cadastrado com sucesso." << endl;
         };
 
 };
