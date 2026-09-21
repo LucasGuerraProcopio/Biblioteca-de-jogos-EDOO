@@ -5,68 +5,119 @@
 #include "metodos_pagamento.hpp"
 using namespace std;
 
+// Classe do usuario 
+class usuario
+{
+    // Informações da conta
+    protected:
+        string nome_conta;
+        int total_jogos_instalados = 0; 
+        int total_jogos_comprados = 0;
+        vector <jogos_gratuitos*> jogos_gratis; // Listas dos jogos que guarda PONTEIROS para os objetos
+        vector <jogos_pagos*> jogos_comprados;
 
-class usuario{
+
+    // Login e saldo da conta
     private:
-        string senha;
-        long numero_de_usuário;
+        string senha_conta;
+        long numero_usuário;
         double saldo = 0;
         vector <cartao_de_credito> cartoes_cadastrados;
-    protected:
-        string nome;
-        int jogos_instalados = 0;
-        int jogos_comprados = 0;
-        vector <jogos_gratuitos*> jogos_gratis;
-        vector <jogos_pagos*> jogos_comprados;
-    public:
 
-        usuario(string nick, long numero, string password){
-            this->nome = nick;
-            this->numero_de_usuário = numero;
-            this->senha = password;
+
+    // Operações com o usuario
+    public:
+        // Construtor de uma nova conta
+        usuario(string novo_nick, long novo_numero, string nova_password)
+        {
+            this->nome_conta = novo_nick;
+            this->numero_usuário = novo_numero;
+            this->senha_conta = nova_password;
             cout << "Seja bem vindo a nossa biblioteca de jogos." << endl;
         };
 
-        ~usuario(){
+
+        // Destrutor para apagar um usuario
+        ~usuario()
+        {
             cout << "Usuário deletado da biblioteca de jogos." <<  endl;
         };
 
-        void SetNome(string nick){
-            this->nome = nick;
-            cout << "Seu nome foi alterado para: " << nick << endl;
+
+        // A cada bloco temos funções que trabalham em conjunto
+        // Nick da conta
+        void SetNome(string novo_nick)
+        {
+            this->nome_conta = novo_nick;
+            cout << "Seu nome foi alterado para: " << novo_nick << endl;
+        };
+        string Getnome()
+        {
+            return nome_conta;
         };
 
-        string Getnome(){
-            return nome;
-        };
 
-        void installar(jogos_gratuitos& jogo){
-            jogos_gratis.emplace_back(&jogo);
+        // Instalar e desinstalar os jogos
+        void installar(jogos_gratuitos& jogo)
+        {
+            jogos_pagos* jogo_pago = dynamic_cast<jogos_pagos*>(&jogo);
+
+            if(jogo_pago != nullptr)
+            {
+                jogos_comprados.emplace_back(jogo_pago);
+                total_jogos_comprados++;
+            }
+            else
+            {
+                jogos_gratis.emplace_back(&jogo);
+                total_jogos_instalados++;
+            };
+
             cout << "O jogo: " << jogo.GetTitulo() << " Foi instalado com sucesso." << endl;
         };
+        void desintallar(string titulo_jogo)
+        {
+            bool jogo_existe = false;
 
-        void desintallar(string titulo){
-            bool existe = false;
-            for(int i = 0; i < jogos_instalados; i++){
-                if((*jogos_gratis[i]).GetTitulo() == titulo){
+            for(int i = 0; i < jogos_gratis.size(); i++)
+            {
+                if((*jogos_gratis[i]).GetTitulo() == titulo_jogo)
+                {
                     jogos_gratis.erase(jogos_gratis.begin() + i);
-                    cout << "O jogo: " << titulo << " foi desinstalado com sucesso." << endl;
-                    existe = true;
+                    total_jogos_instalados--;
+                    cout << "O jogo: " << titulo_jogo << " foi desinstalado com sucesso." << endl;
+                    jogo_existe = true;
                     break;
                 };
             };
-            if(existe == false){
-                cout << "O jogo: " << titulo << " não está instalado ou não existe na biblioteca." << endl;
+
+            if(jogo_existe == false)
+            {
+                for(int i = 0; i < jogos_comprados.size(); i++)
+                {
+                    if((*jogos_comprados[i]).GetTitulo() == titulo_jogo)
+                    {
+                        jogos_comprados.erase(jogos_comprados.begin() + i);
+                        total_jogos_comprados--;
+                        cout << "O jogo: " << titulo_jogo << " foi desinstalado com sucesso." << endl;
+                        jogo_existe = true;
+                        break;
+                    };
+                };
+            };
+
+            if(jogo_existe == false)
+            {
+                cout << "O jogo: " << titulo_jogo << " não está instalado ou não existe na biblioteca." << endl;
             };
         };
-
-
 
 };
 
 
 
-int main(){
+int main()
+{
     jogos_gratuitos Fortinite("Fortinite", 90, "Torres_tortas", "Embananado123");
     jogos_gratuitos Roblox("Roblox", 5, "29/01/2021", "Tripa Boy");
     jogos_gratuitos FNAF("Five nights at Freddy", 10, "FFCBG123456");
@@ -77,11 +128,3 @@ int main(){
     jogos_pagos Fifa("FC 26", 80, "Futebol123", 500);
     jogos_pagos Gta("Grand Theft Auto 6", 220, "Rockstar mercenaria", 550, "CJ");
 };
-
-
-
-
-
-
-
-
