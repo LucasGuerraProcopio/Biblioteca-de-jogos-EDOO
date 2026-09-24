@@ -21,6 +21,15 @@ class jogos_gratuitos
 
     // Operações sobre os jogos gratuitos do usuario
     public:
+
+        jogos_gratuitos(){
+            this->titulo_jogo = "Jogo sem nome";
+            this->tamanho_jogo = 1;
+            this->usuario_jogo = "New_Player123";
+            cout << "Escolha uma senha!" << endl;
+            cin >> senha_jogo;
+        };
+
         // Construtor do jogo gratuito a ser adicionado
         jogos_gratuitos(string titulo_jogo_gratuito, double tamanho_jogo_gratuito, string senha_gratuito, string usuario_gratuito = "Player 1")
         {
@@ -30,11 +39,31 @@ class jogos_gratuitos
             this->usuario_jogo = usuario_gratuito;
         };
 
+        jogos_gratuitos(const jogos_gratuitos &jogoantigo){
+            this->titulo_jogo = jogoantigo.titulo_jogo;
+            this->tamanho_jogo = jogoantigo.tamanho_jogo;
+            this->senha_jogo = jogoantigo.senha_jogo;
+            this->usuario_jogo = jogoantigo.usuario_jogo;
+            this->horas_jogadas = jogoantigo.horas_jogadas;
+        };
+
 
         // Destrutor para desinstalar um jogo
         virtual ~jogos_gratuitos()
         {
             cout << "O jogo: " << titulo_jogo << " foi desinstalado." << endl;
+        };
+
+        bool operator<(const jogos_gratuitos &outro){
+            return tamanho_jogo < outro.tamanho_jogo;
+        };
+
+        bool operator>(const jogos_gratuitos &outro){
+            return tamanho_jogo > outro.tamanho_jogo;
+        };
+
+        bool operator==(const jogos_gratuitos &outro){
+            return tamanho_jogo == outro.tamanho_jogo;
         };
 
         
@@ -157,7 +186,7 @@ class jogos_gratuitos
                 return jogo_comprado;
             };
 
-
+            
             // Função para reembolsar o jogo
             void rembolsar()
             {
@@ -171,5 +200,4 @@ class jogos_gratuitos
                     jogo_comprado = false;              
                 };
             };
-
     };
