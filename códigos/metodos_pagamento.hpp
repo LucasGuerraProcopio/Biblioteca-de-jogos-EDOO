@@ -65,17 +65,17 @@
                 this->taxa_da_biblioteca = taxa;
             };
 
-           string GetChave(){
+            string GetChave(){
             return chave_pix;
-           };
+            };
 
-           void SetTaxa(double nova_taxa){
-            this->taxa_da_biblioteca = nova_taxa;
-           };
+            void SetTaxa(double nova_taxa){
+                this->taxa_da_biblioteca = nova_taxa;
+            };
 
-           double GetTaxa(){
-            return taxa_da_biblioteca;
-           };
+            double GetTaxa(){
+                return taxa_da_biblioteca;
+            };
     };
 
 
@@ -87,6 +87,11 @@
             double valor;
             bool valido = true;
         public:
+
+            gift_card(){
+                this->codigo = "1234 5678 9000";
+                this->valor = 100.00;
+            };
 
             gift_card(string numero, double dinheiro){
                 this->codigo = numero;

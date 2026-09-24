@@ -28,6 +28,14 @@ class usuario
 
     // Operações com o usuario
     public:
+        // construtor básico para caso as informarções não sejam preenchidas
+        usuario(){
+            this->nome_conta = "usuario";
+            this->numero_usuário = 0000000000000001;
+            cout << "escolha uma senha!" << endl;
+            cin >> senha_conta;
+        };
+
         // Construtor de uma nova conta
         usuario(string novo_nick, long novo_numero, string nova_password)
         {
@@ -35,6 +43,13 @@ class usuario
             this->numero_usuário = novo_numero;
             this->senha_conta = nova_password;
             cout << "Seja bem vindo a nossa biblioteca de jogos." << endl;
+        };
+
+        //construtor que copia uma outra contas
+        usuario(const usuario &contavalida){
+            this->nome_conta = contavalida.nome_conta;
+            this->numero_usuário = contavalida.numero_usuário;
+            this->senha_conta = contavalida.senha_conta;
         };
 
 
