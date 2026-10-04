@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <vector>
 #include "sqlite3.h"
 #include "tipos_jogos.hpp"
 using namespace std;
@@ -12,7 +13,7 @@ class banco_de_dados
     private:
         sqlite3* conexao = nullptr;
 
-        // Roda um comando SQL que não precisa de valores
+        // Roda um SQL
         bool executar(const string& comando)
         {
             char* erro = nullptr;
@@ -35,7 +36,6 @@ class banco_de_dados
                 return;
             };
 
-            // O id é o mesmo do catálogo e jogo gratuito fica com preço 0
             executar("CREATE TABLE IF NOT EXISTS jogos ("
                      "id INTEGER PRIMARY KEY, "
                      "titulo TEXT UNIQUE NOT NULL, "
@@ -52,7 +52,7 @@ class banco_de_dados
         banco_de_dados& operator=(const banco_de_dados&) = delete;
 
 
-        // salva o jogo no banco
+        // CREATE: salva o jogo no banco
         bool inserir_jogo(const jogos_gratuitos& jogo)
         {
             sqlite3_stmt* comando = nullptr;
@@ -76,6 +76,45 @@ class banco_de_dados
                 cout << "O jogo " << jogo.GetTitulo() << " já está salvo no banco." << endl;
             };
             return sucesso;
+        };
+
+
+        // lê todos os jogos salvos e devolve PONTEIROS para objetos criados com new
+        vector <jogos_gratuitos*> carregar_jogos()
+        {
+            vector <jogos_gratuitos*> jogos_salvos;
+
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return jogos_salvos;
+            };
+
+            while(sqlite3_step(comando) == SQLITE_ROW)
+            {
+                int id_jogo = sqlite3_column_int(comando, 0);
+                string titulo = (const char*)sqlite3_column_text(comando, 1);
+                double tamanho = sqlite3_column_double(comando, 2);
+                double preco = sqlite3_column_double(comando, 3);
+
+                jogos_gratuitos* jogo = nullptr;
+
+                if(preco > 0)
+                {
+                    jogo = new jogos_pagos(titulo, tamanho, "", preco);
+                }
+                else
+                {
+                    jogo = new jogos_gratuitos(titulo, tamanho, "");
+                };
+
+                jogo->SetId(id_jogo);
+                jogos_salvos.push_back(jogo);
+            };
+
+            sqlite3_finalize(comando);
+            return jogos_salvos;
         };
 
 

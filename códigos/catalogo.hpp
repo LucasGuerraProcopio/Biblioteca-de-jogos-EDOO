@@ -14,7 +14,7 @@ class catalogo
     private:
         vector <jogos_gratuitos*> jogos;
         int proximo_id = 1;
-        banco_de_dados* banco = nullptr;
+        banco_de_dados* banco = nullptr; // Banco onde os jogos são salvos
 
 
     // Operações com o catálogo
@@ -55,7 +55,31 @@ class catalogo
         };
 
 
-        // Remove o jogo da loja e do banco
+        // carrega os jogos salvos no banco e devolve quantos foram carregados
+        int carregar_do_banco()
+        {
+            if(banco == nullptr || jogos.size() > 0)
+            {
+                return 0;
+            };
+
+            vector <jogos_gratuitos*> jogos_salvos = banco->carregar_jogos();
+
+            for(size_t i = 0; i < jogos_salvos.size(); i++)
+            {
+                jogos.push_back(jogos_salvos[i]);
+
+                if(jogos_salvos[i]->GetId() >= proximo_id)
+                {
+                    proximo_id = jogos_salvos[i]->GetId() + 1;
+                };
+            };
+
+            return (int)jogos_salvos.size();
+        };
+
+
+        // remove o jogo da loja e do banco
         bool remover(int id_jogo)
         {
             for(size_t i = 0; i < jogos.size(); i++)
