@@ -6,7 +6,6 @@ using namespace std;
 
 int main()
 {
-    catalogo loja;
     banco_de_dados banco("biblioteca.db");
     catalogo loja(&banco);
     repositorio_usuarios usuarios;
