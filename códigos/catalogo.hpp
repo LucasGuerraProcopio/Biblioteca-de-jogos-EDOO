@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "tipos_jogos.hpp"
+#include "banco_de_dados.hpp"
 using namespace std;
 
 
@@ -13,10 +14,16 @@ class catalogo
     private:
         vector <jogos_gratuitos*> jogos;
         int proximo_id = 1;
+        banco_de_dados* banco = nullptr; // Banco onde os jogos são salvos
 
 
     // Operações com o catálogo
     public:
+        // Construtor
+        catalogo(banco_de_dados* banco_usado = nullptr)
+        {
+            this->banco = banco_usado;
+        };
         // Destrutor
         ~catalogo()
         {
@@ -40,6 +47,10 @@ class catalogo
             novo_jogo->SetId(proximo_id);
             proximo_id++;
             jogos.push_back(novo_jogo);
+            if(banco != nullptr)
+            {
+                banco->inserir_jogo(*novo_jogo);
+            };
             return novo_jogo->GetId();
         };
 
