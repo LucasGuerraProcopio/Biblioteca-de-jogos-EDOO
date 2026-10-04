@@ -168,9 +168,16 @@ class usuario
 
 
         // Verifica se o usuario tem o jogo na biblioteca
-        bool possui(int id_jogo)
+        bool possui(int id_jogo) const
         {
-            return buscar_item(id_jogo) != nullptr;
+            for(size_t i = 0; i < biblioteca.size(); i++)
+            {
+                if(biblioteca[i].id_jogo == id_jogo)
+                {
+                    return true;
+                };
+            };
+            return false;
         };
 
 
@@ -341,7 +348,7 @@ class repositorio_usuarios
 
     // Operações com o repositório
     public:
-        // Destrutor: apaga as contas criadas com new (não copie o repositório)
+        // destrutor
         ~repositorio_usuarios()
         {
             for(size_t i = 0; i < contas.size(); i++)
@@ -351,7 +358,7 @@ class repositorio_usuarios
         };
 
 
-        // Cria a conta e devolve o endereço dela. Devolve nullptr se o nome já existe
+        // cria a conta e devolve o endereço dela
         usuario* criar(string nome, string senha)
         {
             if(buscar_por_nome(nome) != nullptr)
@@ -368,7 +375,7 @@ class repositorio_usuarios
         };
 
 
-        // Buscas: devolvem nullptr se não encontrar
+        // busca, devolvem nullptr se não encontrar
         usuario* buscar_por_id(int id_procurado) const
         {
             for(size_t i = 0; i < contas.size(); i++)
@@ -391,6 +398,60 @@ class repositorio_usuarios
                 };
             };
             return nullptr;
+        };
+
+
+        // Verifica se alguma conta tem o jogo na biblioteca
+        bool alguem_possui(int id_jogo) const
+        {
+            for(size_t i = 0; i < contas.size(); i++)
+            {
+                if(contas[i]->possui(id_jogo) == true)
+                {
+                    return true;
+                };
+            };
+            return false;
+        };
+
+
+        // deleta da conta
+        bool remover(int id_conta)
+        {
+            for(size_t i = 0; i < contas.size(); i++)
+            {
+                if(contas[i]->GetId() == id_conta)
+                {
+                    cout << "A conta: " << contas[i]->Getnome() << " foi removida." << endl;
+                    delete contas[i];
+                    contas.erase(contas.begin() + i);
+                    return true;
+                };
+            };
+
+            cout << "Não existe conta com o id: " << id_conta << endl;
+            return false;
+        };
+
+
+        // deleta do jogo da loja
+        bool excluir_jogo(catalogo& loja, int id_jogo) const
+        {
+            jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+
+            if(jogo == nullptr)
+            {
+                cout << "Não existe jogo com o id: " << id_jogo << endl;
+                return false;
+            };
+
+            if(alguem_possui(id_jogo) == true)
+            {
+                cout << "Não foi possível remover " << jogo->GetTitulo() << ": existe conta que possui o jogo." << endl;
+                return false;
+            };
+
+            return loja.remover(id_jogo);
         };
 
 

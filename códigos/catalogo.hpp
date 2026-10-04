@@ -14,7 +14,7 @@ class catalogo
     private:
         vector <jogos_gratuitos*> jogos;
         int proximo_id = 1;
-        banco_de_dados* banco = nullptr; // Banco onde os jogos são salvos
+        banco_de_dados* banco = nullptr;
 
 
     // Operações com o catálogo
@@ -52,6 +52,29 @@ class catalogo
                 banco->inserir_jogo(*novo_jogo);
             };
             return novo_jogo->GetId();
+        };
+
+
+        // Remove o jogo da loja e do banco
+        bool remover(int id_jogo)
+        {
+            for(size_t i = 0; i < jogos.size(); i++)
+            {
+                if(jogos[i]->GetId() == id_jogo)
+                {
+                    cout << "O jogo: " << jogos[i]->GetTitulo() << " foi removido da loja." << endl;
+                    delete jogos[i];
+                    jogos.erase(jogos.begin() + i);
+                    if(banco != nullptr)
+                    {
+                        banco->remover_jogo(id_jogo);
+                    };
+                    return true;
+                };
+            };
+
+            cout << "Não existe jogo com o id: " << id_jogo << endl;
+            return false;
         };
 
 

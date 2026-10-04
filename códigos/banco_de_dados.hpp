@@ -6,7 +6,7 @@
 using namespace std;
 
 
-// Classe do banco de dados (SQLite)
+// Classe do banco de dados
 class banco_de_dados
 {
     private:
@@ -48,12 +48,11 @@ class banco_de_dados
             sqlite3_close(conexao);
         };
 
-        // Não deixa copiar o banco, senão a conexão seria fechada duas vezes
         banco_de_dados(const banco_de_dados&) = delete;
         banco_de_dados& operator=(const banco_de_dados&) = delete;
 
 
-        // CREATE: salva o jogo no banco
+        // salva o jogo no banco
         bool inserir_jogo(const jogos_gratuitos& jogo)
         {
             sqlite3_stmt* comando = nullptr;
@@ -75,6 +74,30 @@ class banco_de_dados
             if(sucesso == false)
             {
                 cout << "O jogo " << jogo.GetTitulo() << " já está salvo no banco." << endl;
+            };
+            return sucesso;
+        };
+
+
+        // apaga o jogo do banco pelo id
+        bool remover_jogo(int id_jogo)
+        {
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "DELETE FROM jogos WHERE id = ?", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_int(comando, 1, id_jogo);
+
+            bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
+
+            sqlite3_finalize(comando);
+
+            if(sucesso == false)
+            {
+                cout << "Não foi possível apagar o jogo " << id_jogo << " do banco." << endl;
             };
             return sucesso;
         };

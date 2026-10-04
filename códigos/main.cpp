@@ -24,10 +24,9 @@ int main()
 
     loja.listar();
 
-    // Dois usuarios para provar que cada um tem a sua biblioteca
     usuario* ana = usuarios.criar("Ana", "senha1");
     usuario* bia = usuarios.criar("Bia", "senha2");
-    usuarios.criar("Ana", "outra"); // recusado: nome repetido
+    usuarios.criar("Ana", "outra");
 
     usuarios.listar();
 
@@ -35,22 +34,22 @@ int main()
 
     ana->depositar_pix(100, "biblioteca-jogos@exemplo.com");
     ana->Cadastrar_GiftCard(card, "GIFT-1111");
-    ana->Cadastrar_GiftCard(card, "GIFT-1111"); // recusado: já usado
+    ana->Cadastrar_GiftCard(card, "GIFT-1111");
 
     jogos_gratuitos* roblox = loja.buscar_por_titulo("Roblox");
     jogos_gratuitos* minecraft = loja.buscar_por_titulo("Minecraft");
     jogos_gratuitos* gta = loja.buscar_por_id(9);
 
     ana->adquirir(*roblox);
-    ana->adquirir(*roblox);    // recusado: já possui
-    ana->adquirir(*gta);       // recusado: saldo insuficiente
+    ana->adquirir(*roblox);
+    ana->adquirir(*gta);
     ana->adquirir(*minecraft);
 
     ana->instalar(minecraft->GetId());
     ana->instalar(roblox->GetId());
     ana->desinstalar(roblox->GetId());
 
-    // A Bia compra o MESMO Minecraft e não herda nada da Ana
+   
     bia->depositar_pix(100, "biblioteca-jogos@exemplo.com");
     bia->adquirir(*minecraft);
 
@@ -60,7 +59,26 @@ int main()
     ana->reembolsar(*minecraft);
 
     ana->mostrar_biblioteca(loja);
-    bia->mostrar_biblioteca(loja); // a Bia continua com o Minecraft
+    bia->mostrar_biblioteca(loja);
+
+
+    // deleta jogos
+    cout << "\n===== DELETE =====" << endl;
+    usuarios.excluir_jogo(loja, 6);  
+    usuarios.excluir_jogo(loja, 2);  
+    usuarios.excluir_jogo(loja, 99); 
+    usuarios.excluir_jogo(loja, 7); 
+
+    loja.listar();
+
+    // deleta usuario
+    usuarios.remover(2);
+    usuarios.remover(2);
+    usuarios.excluir_jogo(loja, 6);
+
+    loja.listar();
+    usuarios.listar();
+    ana->mostrar_biblioteca(loja);
 
     return 0;
 }
