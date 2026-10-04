@@ -9,9 +9,9 @@ class jogos_gratuitos
 {
     // Informações sobre o jogo
     protected:
+        int id = 0;
         string titulo_jogo;
         double tamanho_jogo;
-        int horas_jogadas = 0;
 
 
     // Login e senha do jogo
@@ -40,14 +40,14 @@ class jogos_gratuitos
             this->usuario_jogo = usuario_gratuito;
         };
 
-        // Construtor de cópia
+        // Construtor de copia
         jogos_gratuitos(const jogos_gratuitos &jogoantigo)
         {
+            this->id = jogoantigo.id;
             this->titulo_jogo = jogoantigo.titulo_jogo;
             this->tamanho_jogo = jogoantigo.tamanho_jogo;
             this->senha_jogo = jogoantigo.senha_jogo;
             this->usuario_jogo = jogoantigo.usuario_jogo;
-            this->horas_jogadas = jogoantigo.horas_jogadas;
         };
 
         // Destrutor virtual
@@ -70,7 +70,29 @@ class jogos_gratuitos
         };
 
 
+        // Funções virtuais
+        virtual double GetPreco() const
+        {
+            return 0;
+        };
+        virtual bool EhPago() const
+        {
+            return false;
+        };
+
+
         // A cada bloco temos funções que trabalham em conjunto
+        // Id do jogo
+        void SetId(int novo_id)
+        {
+            this->id = novo_id;
+        };
+        int GetId() const
+        {
+            return id;
+        };
+
+
         // Título do jogo
         void SetTitulo(string titulo_jogo_gratuito)
         {
@@ -93,17 +115,6 @@ class jogos_gratuitos
         };
 
 
-        // Horas jogadas
-        void SetHoras(int novas_horas_jogadas)
-        {
-            this->horas_jogadas += novas_horas_jogadas;
-        };
-        int GetHoras() const
-        {
-            return horas_jogadas;
-        };
-
-
         // Senha do jogo
         void SetSenha(string senha_gratuito)
         {
@@ -115,7 +126,7 @@ class jogos_gratuitos
         };
 
 
-        // Usuário do jogo
+        // Usuario do jogo
         void SetConta(string usuario_gratuito)
         {
             this->usuario_jogo = usuario_gratuito;
@@ -129,7 +140,16 @@ class jogos_gratuitos
         // Função das informações
         void mostrar_informacoes() const
         {
-            cout << "O jogo: " << titulo_jogo << " pesa: " << tamanho_jogo << " Gigabytes\n" << "Suas horas jogadas: " << horas_jogadas << endl;
+            cout << "[" << id << "] " << titulo_jogo << " | " << tamanho_jogo << " Gigabytes | ";
+
+            if(EhPago() == true)
+            {
+                cout << "R$ " << GetPreco() << endl;
+            }
+            else
+            {
+                cout << "Gratuito" << endl;
+            };
         };
 };
 
@@ -137,10 +157,9 @@ class jogos_gratuitos
 // Classe dos jogos pagos que herda da classe dos jogos gratuitos
 class jogos_pagos : public jogos_gratuitos
 {
-    // Informações da compra do jogo pago
+    // Informações do preço do jogo pago
     private:
         double valor_jogo;
-        bool jogo_comprado = false;
 
 
     // Operações com os jogos pagos
@@ -151,10 +170,22 @@ class jogos_pagos : public jogos_gratuitos
             this->valor_jogo = preco_jogo;
         };
 
-        // Destrutor sem mensagem
+        // Destrutor
         ~jogos_pagos() {};
 
 
+        //jogo pago troca o resultado das funções virtuais
+        double GetPreco() const
+        {
+            return valor_jogo;
+        };
+        bool EhPago() const
+        {
+            return true;
+        };
+
+
+        // A cada bloco temos funções que trabalham em conjunto
         // Valor do jogo
         void SetValor(double preco_jogo)
         {
@@ -163,39 +194,5 @@ class jogos_pagos : public jogos_gratuitos
         double Getvalor() const
         {
             return valor_jogo;
-        };
-
-
-        // Jogo comprado
-        bool comprar()
-        {
-            if(jogo_comprado == false)
-            {
-                cout << "Você comprou o jogo: " << titulo_jogo << endl;
-                jogo_comprado = true;
-                return true;
-            };
-
-            cout << "Você já tem esse jogo." << endl;
-            return false;
-        };
-        bool GetEstado() const
-        {
-            return jogo_comprado;
-        };
-
-
-        // Reembolsa o jogo
-        bool rembolsar()
-        {
-            if(jogo_comprado == false)
-            {
-                cout << "Você não possui esse jogo: " << titulo_jogo << endl;
-                return false;
-            };
-
-            cout << "O jogo: " << titulo_jogo << " foi reembolsado." << endl;
-            jogo_comprado = false;
-            return true;
         };
 };
