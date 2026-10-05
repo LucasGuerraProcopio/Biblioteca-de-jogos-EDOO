@@ -78,6 +78,15 @@ class catalogo
             return (int)jogos_salvos.size();
         };
 
+        // salva no banco as mudanças feitas no jogo
+        bool salvar(jogos_gratuitos* jogo)
+        {
+            if(jogo == nullptr || banco == nullptr)
+            {
+                return false;
+            };
+            return banco->atualizar_jogo(*jogo);
+        };
 
         // remove o jogo da loja e do banco
         bool remover(int id_jogo)
