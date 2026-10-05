@@ -14,7 +14,7 @@ class jogos_gratuitos
         double tamanho_jogo;
 
 
-    // Login e senha do jogo
+    // login e senha do jogo
     private:
         string senha_jogo;
         string usuario_jogo;
@@ -40,7 +40,7 @@ class jogos_gratuitos
             this->usuario_jogo = usuario_gratuito;
         };
 
-        // Construtor de copia
+        // construtor de copia
         jogos_gratuitos(const jogos_gratuitos &jogoantigo)
         {
             this->id = jogoantigo.id;
@@ -50,10 +50,10 @@ class jogos_gratuitos
             this->usuario_jogo = jogoantigo.usuario_jogo;
         };
 
-        // Destrutor virtual
+        // destrutor virtual
         virtual ~jogos_gratuitos() {};
 
-        // Comparadores pelo tamanho do jogo
+        // comparadores pelo tamanho do jogo
         bool operator<(const jogos_gratuitos &outro) const
         {
             return tamanho_jogo < outro.tamanho_jogo;
@@ -82,7 +82,7 @@ class jogos_gratuitos
 
 
         // A cada bloco temos funções que trabalham em conjunto
-        // Id do jogo
+        // id do jogo
         void SetId(int novo_id)
         {
             this->id = novo_id;
@@ -93,7 +93,7 @@ class jogos_gratuitos
         };
 
 
-        // Título do jogo
+        // Titulo do jogo
         void SetTitulo(string titulo_jogo_gratuito)
         {
             this->titulo_jogo = titulo_jogo_gratuito;
@@ -120,13 +120,17 @@ class jogos_gratuitos
         {
             this->senha_jogo = senha_gratuito;
         };
+        string GetSenha() const
+        {
+            return senha_jogo;
+        };
         bool verificar_senha(string tentativa) const
         {
             return tentativa == senha_jogo;
         };
 
 
-        // Usuario do jogo
+        // usuario do jogo
         void SetConta(string usuario_gratuito)
         {
             this->usuario_jogo = usuario_gratuito;
@@ -137,7 +141,7 @@ class jogos_gratuitos
         };
 
 
-        // Função das informações
+        // função das informações
         void mostrar_informacoes() const
         {
             cout << "[" << id << "] " << titulo_jogo << " | " << tamanho_jogo << " Gigabytes | ";
@@ -164,13 +168,13 @@ class jogos_pagos : public jogos_gratuitos
 
     // Operações com os jogos pagos
     public:
-        // Construtor do jogo pago
+        // construtor
         jogos_pagos(string titulo_jogo_pago, double tamanho_jogo_pago, string senha_pago, double preco_jogo, string usuario_pago = "Player 1") : jogos_gratuitos(titulo_jogo_pago, tamanho_jogo_pago, senha_pago, usuario_pago)
         {
             this->valor_jogo = preco_jogo;
         };
 
-        // Destrutor
+        // destrutor
         ~jogos_pagos() {};
 
 
@@ -186,7 +190,7 @@ class jogos_pagos : public jogos_gratuitos
 
 
         // A cada bloco temos funções que trabalham em conjunto
-        // Valor do jogo
+        // valor do jogo
         void SetValor(double preco_jogo)
         {
             this->valor_jogo = preco_jogo;

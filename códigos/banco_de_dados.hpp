@@ -13,7 +13,7 @@ class banco_de_dados
     private:
         sqlite3* conexao = nullptr;
 
-        // Roda um SQL
+        // SQL
         bool executar(const string& comando)
         {
             char* erro = nullptr;
@@ -40,7 +40,9 @@ class banco_de_dados
                      "id INTEGER PRIMARY KEY, "
                      "titulo TEXT UNIQUE NOT NULL, "
                      "tamanho REAL NOT NULL, "
-                     "preco REAL NOT NULL DEFAULT 0)");
+                     "preco REAL NOT NULL DEFAULT 0, "
+                     "usuario TEXT NOT NULL DEFAULT '', "
+                     "senha TEXT NOT NULL DEFAULT '')");
         };
 
         ~banco_de_dados()
@@ -52,11 +54,11 @@ class banco_de_dados
         banco_de_dados& operator=(const banco_de_dados&) = delete;
 
 
-        // CREATE: salva o jogo no banco
+        // salva o jogo no banco
         bool inserir_jogo(const jogos_gratuitos& jogo)
         {
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "INSERT INTO jogos (id, titulo, tamanho, preco) VALUES (?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "INSERT INTO jogos (id, titulo, tamanho, preco, usuario, senha) VALUES (?, ?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return false;
@@ -66,6 +68,8 @@ class banco_de_dados
             sqlite3_bind_text(comando, 2, jogo.GetTitulo().c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_double(comando, 3, jogo.GetTamanho());
             sqlite3_bind_double(comando, 4, jogo.GetPreco());
+            sqlite3_bind_text(comando, 5, jogo.GetConta().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(comando, 6, jogo.GetSenha().c_str(), -1, SQLITE_TRANSIENT);
 
             bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
 
@@ -79,13 +83,13 @@ class banco_de_dados
         };
 
 
-        // lê todos os jogos salvos e devolve PONTEIROS para objetos criados com new
+        // le todos os jogos salvos e devolve PONTEIROS para objetos criados com new
         vector <jogos_gratuitos*> carregar_jogos()
         {
             vector <jogos_gratuitos*> jogos_salvos;
 
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco, usuario, senha FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return jogos_salvos;
@@ -97,16 +101,18 @@ class banco_de_dados
                 string titulo = (const char*)sqlite3_column_text(comando, 1);
                 double tamanho = sqlite3_column_double(comando, 2);
                 double preco = sqlite3_column_double(comando, 3);
+                string usuario = (const char*)sqlite3_column_text(comando, 4);
+                string senha = (const char*)sqlite3_column_text(comando, 5);
 
                 jogos_gratuitos* jogo = nullptr;
 
                 if(preco > 0)
                 {
-                    jogo = new jogos_pagos(titulo, tamanho, "", preco);
+                    jogo = new jogos_pagos(titulo, tamanho, senha, preco, usuario);
                 }
                 else
                 {
-                    jogo = new jogos_gratuitos(titulo, tamanho, "");
+                    jogo = new jogos_gratuitos(titulo, tamanho, senha, usuario);
                 };
 
                 jogo->SetId(id_jogo);
