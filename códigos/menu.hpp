@@ -95,6 +95,83 @@ inline void cadastrar_conta(repositorio_usuarios& usuarios)
 }
 
 
+// altera o nome ou a senha de uma conta
+inline void atualizar_conta(repositorio_usuarios& usuarios)
+{
+    cout << "\n--- Atualizar conta ---" << endl;
+
+    int id_conta = ler_inteiro("Id da conta: ");
+    usuario* conta = usuarios.buscar_por_id(id_conta);
+
+    if(conta == nullptr)
+    {
+        cout << "Não existe conta com o id: " << id_conta << endl;
+        return;
+    };
+
+    string senha_atual = ler_texto("Senha atual: ");
+    if(conta->verificar_senha(senha_atual) == false)
+    {
+        cout << "Senha incorreta." << endl;
+        return;
+    };
+
+    int opcao = ler_inteiro("O que alterar (1 - nome, 2 - senha): ");
+    while(opcao != 1 && opcao != 2)
+    {
+        if(cin.eof())
+        {
+            return;
+        };
+        opcao = ler_inteiro("Digite 1 para nome ou 2 para senha: ");
+    };
+
+    if(opcao == 1)
+    {
+        string novo_nome = ler_texto("Novo nome: ");
+        if(novo_nome.size() == 0)
+        {
+            return;
+        };
+        usuarios.renomear(id_conta, novo_nome);
+    }
+    else
+    {
+        string nova_senha = ler_texto("Nova senha: ");
+        if(nova_senha.size() == 0)
+        {
+            return;
+        };
+        conta->SetSenha(nova_senha);
+    };
+}
+
+
+// remove uma conta do repositório
+inline void remover_conta(repositorio_usuarios& usuarios)
+{
+    cout << "\n--- Remover conta ---" << endl;
+
+    int id_conta = ler_inteiro("Id da conta: ");
+    usuario* conta = usuarios.buscar_por_id(id_conta);
+
+    if(conta == nullptr)
+    {
+        cout << "Não existe conta com o id: " << id_conta << endl;
+        return;
+    };
+
+    string senha = ler_texto("Senha da conta: ");
+    if(conta->verificar_senha(senha) == false)
+    {
+        cout << "Senha incorreta." << endl;
+        return;
+    };
+
+    usuarios.remover(id_conta);
+}
+
+
 // menu principal
 inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
 {
@@ -107,6 +184,8 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "2 - Cadastrar jogo" << endl;
         cout << "3 - Listar contas" << endl;
         cout << "4 - Cadastrar conta" << endl;
+        cout << "5 - Atualizar conta" << endl;
+        cout << "6 - Remover conta" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -124,6 +203,12 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 4:
                 cadastrar_conta(usuarios);
+                break;
+            case 5:
+                atualizar_conta(usuarios);
+                break;
+            case 6:
+                remover_conta(usuarios);
                 break;
             case 0:
                 cout << "Saindo..." << endl;
