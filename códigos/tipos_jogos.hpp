@@ -188,8 +188,7 @@ class jogos_pagos : public jogos_gratuitos
             return true;
         };
 
-
-        // A cada bloco temos funções que trabalham em conjunto
+        
         // valor do jogo
         void SetValor(double preco_jogo)
         {
@@ -199,4 +198,14 @@ class jogos_pagos : public jogos_gratuitos
         {
             return valor_jogo;
         };
+};
+
+
+// jogos da biblioteca de UM usuario
+struct item_biblioteca
+{
+    int id_jogo = 0;
+    bool instalado = false;
+    int horas_jogadas = 0;
+    long long data_compra = 0;
 };

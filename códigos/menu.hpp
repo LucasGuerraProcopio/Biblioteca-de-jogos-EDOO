@@ -143,6 +143,7 @@ inline void atualizar_conta(repositorio_usuarios& usuarios)
             return;
         };
         conta->SetSenha(nova_senha);
+        usuarios.salvar(conta);
     };
 }
 

@@ -8,7 +8,7 @@ using namespace std;
 // Classe do cartão de crédito
 class cartao_de_credito
 {
-    // Informações do cartão
+    // informações do cartão
     private:
         string numero_credito;
         int cvc_credito;
@@ -19,13 +19,14 @@ class cartao_de_credito
 
     // Operações com o cartão de crédito
     public:
-        // Construtor do novo cartão de crédito
-        cartao_de_credito(string numero_credito_novo, int cvc_credito_novo, string validade_credito_novo, double limite_credito_novo)
+        // construtor do novo cartão de crédito
+        cartao_de_credito(string numero_credito_novo, int cvc_credito_novo, string validade_credito_novo, double limite_credito_novo, double gastos_credito_novo = 0)
         {
             this->numero_credito = numero_credito_novo;
             this->cvc_credito = cvc_credito_novo;
             this->validade_credito = validade_credito_novo;
             this->limite_credito = limite_credito_novo;
+            this->gastos_credito = gastos_credito_novo;
         };
 
 
@@ -47,6 +48,21 @@ class cartao_de_credito
             gastos_credito += valor_compra;
             cout << "Compra aprovada no valor de: " << valor_compra << "\nGastos totais com esse cartão na biblioteca de jogos: " << gastos_credito << endl;
             return true;
+        };
+
+        string GetNumero() const
+        {
+            return numero_credito;
+        };
+
+        int GetCvc() const
+        {
+            return cvc_credito;
+        };
+
+        string GetValidade() const
+        {
+            return validade_credito;
         };
 
         double GetGastos() const

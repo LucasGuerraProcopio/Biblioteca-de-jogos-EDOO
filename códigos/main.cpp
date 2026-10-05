@@ -9,9 +9,9 @@ int main()
 {
     banco_de_dados banco("biblioteca.db");
     catalogo loja(&banco);
-    repositorio_usuarios usuarios;
+    repositorio_usuarios usuarios(&banco);
 
-    // carrega os jogos salvos. Se o banco estiver vazio, cadastra os jogos iniciais
+    // carrega os jogos salvos
     int carregados = loja.carregar_do_banco();
 
     if(carregados == 0)
@@ -29,6 +29,14 @@ int main()
     else
     {
         cout << carregados << " jogos carregados do banco." << endl;
+    };
+
+    // carrega as contas salvas, com biblioteca, saldo e cartões
+    int contas_carregadas = usuarios.carregar_do_banco();
+
+    if(contas_carregadas > 0)
+    {
+        cout << contas_carregadas << " contas carregadas do banco." << endl;
     };
 
     executar_menu(loja, usuarios);

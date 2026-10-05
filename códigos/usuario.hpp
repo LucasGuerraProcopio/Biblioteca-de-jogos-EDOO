@@ -6,17 +6,8 @@
 #include "tipos_jogos.hpp"
 #include "metodos_pagamento.hpp"
 #include "catalogo.hpp"
+#include "banco_de_dados.hpp"
 using namespace std;
-
-
-// jogos da biblioteca do usuario
-struct item_biblioteca
-{
-    int id_jogo = 0;
-    bool instalado = false;
-    int horas_jogadas = 0;
-    long long data_compra = 0;
-};
 
 
 // Classe do usuario
@@ -76,7 +67,7 @@ class usuario
         };
 
 
-        // a cada bloco temos funções que trabalham em conjunto
+        // A cada bloco temos funções que trabalham em conjunto
         // id da conta
         void SetId(int novo_id)
         {
@@ -106,9 +97,39 @@ class usuario
             this->senha_conta = nova_senha;
             cout << "Sua senha foi alterada com sucesso." << endl;
         };
+        string GetSenha() const
+        {
+            return senha_conta;
+        };
         bool verificar_senha(string tentativa) const
         {
             return tentativa == senha_conta;
+        };
+
+
+        // leitura da biblioteca e dos cartões, usada para salvar no banco
+        const vector <item_biblioteca>& GetBiblioteca() const
+        {
+            return biblioteca;
+        };
+        const vector <cartao_de_credito>& GetCartoes() const
+        {
+            return cartoes_cadastrados;
+        };
+
+
+        // restauram os dados carregados do banco, sem mensagens na tela
+        void RestaurarSaldo(double saldo_salvo)
+        {
+            this->saldo = saldo_salvo;
+        };
+        void RestaurarItem(const item_biblioteca& item_salvo)
+        {
+            biblioteca.push_back(item_salvo);
+        };
+        void RestaurarCartao(const cartao_de_credito& cartao_salvo)
+        {
+            cartoes_cadastrados.push_back(cartao_salvo);
         };
 
 
@@ -344,10 +365,17 @@ class repositorio_usuarios
     private:
         vector <usuario*> contas;
         int proximo_id = 1;
+        banco_de_dados* banco = nullptr;
 
 
     // operações com o repositorio
     public:
+        // construtor
+        repositorio_usuarios(banco_de_dados* banco_usado = nullptr)
+        {
+            this->banco = banco_usado;
+        };
+
         // destrutor
         ~repositorio_usuarios()
         {
@@ -358,7 +386,61 @@ class repositorio_usuarios
         };
 
 
-        // cria a conta e devolve o endereço dela
+        // salva a conta, a biblioteca e os cartões no banco
+        void salvar(usuario* conta)
+        {
+            if(banco == nullptr || conta == nullptr)
+            {
+                return;
+            };
+
+            banco->salvar_conta(conta->GetId(), conta->Getnome(), conta->GetSenha(), conta->GetSaldo());
+            banco->salvar_biblioteca(conta->GetId(), conta->GetBiblioteca());
+            banco->salvar_cartoes(conta->GetId(), conta->GetCartoes());
+        };
+
+
+        // carrega as contas salvas no banco e devolve quantas foram carregadas
+        int carregar_do_banco()
+        {
+            if(banco == nullptr || contas.size() > 0)
+            {
+                return 0;
+            };
+
+            vector <dados_conta> contas_salvas = banco->carregar_contas();
+
+            for(size_t i = 0; i < contas_salvas.size(); i++)
+            {
+                usuario* conta = new usuario(contas_salvas[i].nome, contas_salvas[i].senha);
+                conta->SetId(contas_salvas[i].id);
+                conta->RestaurarSaldo(contas_salvas[i].saldo);
+
+                vector <item_biblioteca> itens = banco->carregar_biblioteca(contas_salvas[i].id);
+                for(size_t j = 0; j < itens.size(); j++)
+                {
+                    conta->RestaurarItem(itens[j]);
+                };
+
+                vector <cartao_de_credito> cartoes = banco->carregar_cartoes(contas_salvas[i].id);
+                for(size_t j = 0; j < cartoes.size(); j++)
+                {
+                    conta->RestaurarCartao(cartoes[j]);
+                };
+
+                contas.push_back(conta);
+
+                if(conta->GetId() >= proximo_id)
+                {
+                    proximo_id = conta->GetId() + 1;
+                };
+            };
+
+            return (int)contas_salvas.size();
+        };
+
+
+        // cria a conta, salva no banco e devolve o endereço dela
         usuario* criar(string nome, string senha)
         {
             if(buscar_por_nome(nome) != nullptr)
@@ -371,6 +453,7 @@ class repositorio_usuarios
             nova_conta->SetId(proximo_id);
             proximo_id++;
             contas.push_back(nova_conta);
+            salvar(nova_conta);
             return nova_conta;
         };
 
@@ -421,6 +504,7 @@ class repositorio_usuarios
             };
 
             conta->SetNome(novo_nome);
+            salvar(conta);
             return true;
         };
 
@@ -439,7 +523,7 @@ class repositorio_usuarios
         };
 
 
-        // delete da conta
+        // delete da conta, na lista e no banco
         bool remover(int id_conta)
         {
             for(size_t i = 0; i < contas.size(); i++)
@@ -449,6 +533,11 @@ class repositorio_usuarios
                     cout << "A conta: " << contas[i]->Getnome() << " foi removida." << endl;
                     delete contas[i];
                     contas.erase(contas.begin() + i);
+
+                    if(banco != nullptr)
+                    {
+                        banco->remover_conta(id_conta);
+                    };
                     return true;
                 };
             };
