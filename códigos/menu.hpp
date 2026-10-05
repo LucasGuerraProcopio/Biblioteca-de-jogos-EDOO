@@ -62,6 +62,77 @@ inline void cadastrar_jogo(catalogo& loja)
     };
 }
 
+// altera título, tamanho ou preço de um jogo
+inline void atualizar_jogo(catalogo& loja)
+{
+    cout << "\n--- Atualizar jogo ---" << endl;
+
+    int id_jogo = ler_inteiro("Id do jogo: ");
+    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+
+    if(jogo == nullptr)
+    {
+        cout << "Não existe jogo com o id: " << id_jogo << endl;
+        return;
+    };
+
+    jogo->mostrar_informacoes();
+
+    int opcao = ler_inteiro("O que alterar (1 - título, 2 - tamanho, 3 - preço): ");
+    while(opcao < 1 || opcao > 3)
+    {
+        if(cin.eof())
+        {
+            return;
+        };
+        opcao = ler_inteiro("Digite 1, 2 ou 3: ");
+    };
+
+    if(opcao == 1)
+    {
+        string novo_titulo = ler_texto("Novo título: ");
+        if(novo_titulo.size() == 0)
+        {
+            return;
+        };
+
+        if(loja.buscar_por_titulo(novo_titulo) != nullptr)
+        {
+            cout << "Já existe um jogo com o título: " << novo_titulo << endl;
+            return;
+        };
+        jogo->SetTitulo(novo_titulo);
+    }
+    else if(opcao == 2)
+    {
+        double novo_tamanho = ler_positivo("Novo tamanho em Gigabytes: ");
+        if(novo_tamanho == 0)
+        {
+            return;
+        };
+        jogo->SetTamanho(novo_tamanho);
+    }
+    else
+    {
+        // só jogos pagos têm preço
+        jogos_pagos* jogo_pago = dynamic_cast<jogos_pagos*>(jogo);
+        if(jogo_pago == nullptr)
+        {
+            cout << "Jogos gratuitos não têm preço." << endl;
+            return;
+        };
+
+        double novo_preco = ler_positivo("Novo preço em reais: ");
+        if(novo_preco == 0)
+        {
+            return;
+        };
+        jogo_pago->SetValor(novo_preco);
+    };
+
+    loja.salvar(jogo);
+    cout << "Jogo atualizado." << endl;
+}
 
 // pede os dados e cria a conta no repositório
 inline void cadastrar_conta(repositorio_usuarios& usuarios)
@@ -214,6 +285,7 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "5 - Atualizar conta" << endl;
         cout << "6 - Remover conta" << endl;
         cout << "7 - Remover jogo" << endl;
+        cout << "8 - Atualizar jogo" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -240,6 +312,9 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 7:
                 remover_jogo(loja, usuarios);
+                break;
+            case 8:
+                atualizar_jogo(loja);
                 break;
             case 0:
                 cout << "Saindo..." << endl;
