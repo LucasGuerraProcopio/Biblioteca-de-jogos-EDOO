@@ -173,6 +173,32 @@ inline void remover_conta(repositorio_usuarios& usuarios)
 }
 
 
+// remove um jogo da loja e do banco, só se nenhuma conta possuir o jogo
+inline void remover_jogo(catalogo& loja, repositorio_usuarios& usuarios)
+{
+    cout << "\n--- Remover jogo ---" << endl;
+    loja.listar();
+
+    int id_jogo = ler_inteiro("Id do jogo: ");
+    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+
+    if(jogo == nullptr)
+    {
+        cout << "Não existe jogo com o id: " << id_jogo << endl;
+        return;
+    };
+
+    string confirmacao = ler_texto("Remover o jogo " + jogo->GetTitulo() + "? (s/n): ");
+    if(confirmacao != "s" && confirmacao != "S")
+    {
+        cout << "Remoção cancelada." << endl;
+        return;
+    };
+
+    usuarios.excluir_jogo(loja, id_jogo);
+}
+
+
 // menu principal
 inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
 {
@@ -187,6 +213,7 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "4 - Cadastrar conta" << endl;
         cout << "5 - Atualizar conta" << endl;
         cout << "6 - Remover conta" << endl;
+        cout << "7 - Remover jogo" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -210,6 +237,9 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 6:
                 remover_conta(usuarios);
+                break;
+            case 7:
+                remover_jogo(loja, usuarios);
                 break;
             case 0:
                 cout << "Saindo..." << endl;
