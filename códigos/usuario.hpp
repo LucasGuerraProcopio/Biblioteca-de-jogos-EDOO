@@ -9,34 +9,34 @@
 using namespace std;
 
 
-// Cada jogo da biblioteca de UM usuario. O estado fica aqui e não no jogo
+// jogos da biblioteca do usuario
 struct item_biblioteca
 {
-    int id_jogo = 0;           // id do jogo no catálogo
+    int id_jogo = 0;
     bool instalado = false;
     int horas_jogadas = 0;
-    long long data_compra = 0; // data da compra em segundos (time)
+    long long data_compra = 0;
 };
 
 
 // Classe do usuario
 class usuario
 {
-    // Informações da conta
+    // informações da conta
     protected:
-        int id = 0; // o repositório define o id quando a conta é criada
+        int id = 0;
         string nome_conta;
         vector <item_biblioteca> biblioteca;
         pix pix_da_biblioteca;
 
 
-    // Login, saldo e métodos auxiliares
+    // login, saldo e métodos auxiliares
     private:
         string senha_conta;
         double saldo = 0;
         vector <cartao_de_credito> cartoes_cadastrados;
 
-        // Retorna o endereço do item na biblioteca ou nullptr se o usuario não tem o jogo
+        // endereço do item na biblioteca ou nullptr se o usuario não tem o jogo
         item_biblioteca* buscar_item(int id_jogo)
         {
             for(size_t i = 0; i < biblioteca.size(); i++)
@@ -49,7 +49,7 @@ class usuario
             return nullptr;
         };
 
-        // Coloca o jogo na biblioteca depois do pagamento aprovado
+        // coloca o jogo na biblioteca depois do pagamento aprovado
         void registrar_item(int id_jogo)
         {
             item_biblioteca novo_item;
@@ -59,16 +59,16 @@ class usuario
         };
 
 
-    // Operações com o usuario
+    // operações com o usuario
     public:
-        // Construtor do usuario
+        // construtor do usuario
         usuario()
         {
             this->nome_conta = "usuario";
             this->senha_conta = "";
         };
 
-        // Construtor da conta
+        // construtor da conta
         usuario(string novo_nick, string nova_password)
         {
             this->nome_conta = novo_nick;
@@ -76,8 +76,8 @@ class usuario
         };
 
 
-        // A cada bloco temos funções que trabalham em conjunto
-        // Id da conta
+        // a cada bloco temos funções que trabalham em conjunto
+        // id da conta
         void SetId(int novo_id)
         {
             this->id = novo_id;
@@ -88,7 +88,7 @@ class usuario
         };
 
 
-        // Nick da conta
+        // nick da conta
         void SetNome(string novo_nick)
         {
             this->nome_conta = novo_nick;
@@ -100,7 +100,7 @@ class usuario
         };
 
 
-        // Senha da conta
+        // senha da conta
         void SetSenha(string nova_senha)
         {
             this->senha_conta = nova_senha;
@@ -112,7 +112,7 @@ class usuario
         };
 
 
-        // Depósito via pix
+        // deposito via pix
         void depositar_pix(double valor, string codigo)
         {
             if(valor <= 0)
@@ -133,7 +133,7 @@ class usuario
             cout << "Depósito de " << valor << " reais via pix. Taxa: " << taxa << ". Creditado: " << liquido << " reais." << endl;
         };
 
-        // Gift card recebido por referência para marcar o gift card original como usado
+        // gift card recebido por referencia, para marcar o gift card original como usado
         void Cadastrar_GiftCard(gift_card& novo_card, string codigo)
         {
             if(novo_card.EstaValido() == false)
@@ -159,7 +159,7 @@ class usuario
         };
 
 
-        // Cartões cadastrados
+        // cartões cadastrados
         void adicionar_cartao(const cartao_de_credito& novo_cartao)
         {
             cartoes_cadastrados.push_back(novo_cartao);
@@ -167,7 +167,7 @@ class usuario
         };
 
 
-        // Verifica se o usuario tem o jogo na biblioteca
+        // verifica se o usuario tem o jogo na biblioteca
         bool possui(int id_jogo) const
         {
             for(size_t i = 0; i < biblioteca.size(); i++)
@@ -181,7 +181,7 @@ class usuario
         };
 
 
-        // Adquirir o jogo: o gratuito entra direto na biblioteca, o pago desconta do saldo
+        // adquirir o jogo
         bool adquirir(const jogos_gratuitos& jogo)
         {
             if(possui(jogo.GetId()) == true)
@@ -206,7 +206,7 @@ class usuario
             return true;
         };
 
-        // Adquirir o jogo pago com um cartão cadastrado (indice começa em 0)
+        // adquirir o jogo pago com um cartão cadastrado
         bool adquirir_com_cartao(const jogos_gratuitos& jogo, int indice_cartao)
         {
             if(jogo.EhPago() == false)
@@ -237,7 +237,7 @@ class usuario
         };
 
 
-        // Instalar e desinstalar: o jogo continua na biblioteca
+        // instalar e desinstalar
         bool instalar(int id_jogo)
         {
             item_biblioteca* item = buscar_item(id_jogo);
@@ -275,7 +275,7 @@ class usuario
         };
 
 
-        // Reembolso: tira da biblioteca e devolve o valor ao saldo. A regra de prazo e horas fica para depois
+        // reembolso
         bool reembolsar(const jogos_gratuitos& jogo)
         {
             if(jogo.EhPago() == false)
@@ -300,7 +300,7 @@ class usuario
         };
 
 
-        // Lista os jogos da conta. Precisa do catálogo para trocar o id pelo título
+        // lista os jogos da conta
         void mostrar_biblioteca(const catalogo& loja) const
         {
             cout << "\n--- Biblioteca de " << nome_conta << " (id " << id << ") ---" << endl;
@@ -337,7 +337,7 @@ class usuario
 };
 
 
-// Classe do repositório: guarda todas as contas
+// Classe do repositório
 class repositorio_usuarios
 {
     // Lista das contas que guarda PONTEIROS para os objetos criados com new
@@ -346,7 +346,7 @@ class repositorio_usuarios
         int proximo_id = 1;
 
 
-    // Operações com o repositório
+    // operações com o repositorio
     public:
         // destrutor
         ~repositorio_usuarios()
@@ -401,7 +401,31 @@ class repositorio_usuarios
         };
 
 
-        // Verifica se alguma conta tem o jogo na biblioteca
+        // altera o nome da conta, recusa se outra conta já usa o nome
+        bool renomear(int id_conta, string novo_nome)
+        {
+            usuario* conta = buscar_por_id(id_conta);
+
+            if(conta == nullptr)
+            {
+                cout << "Não existe conta com o id: " << id_conta << endl;
+                return false;
+            };
+
+            usuario* outra_conta = buscar_por_nome(novo_nome);
+
+            if(outra_conta != nullptr && outra_conta != conta)
+            {
+                cout << "Já existe uma conta com o nome: " << novo_nome << endl;
+                return false;
+            };
+
+            conta->SetNome(novo_nome);
+            return true;
+        };
+
+
+        // verifica se alguma conta tem o jogo na biblioteca
         bool alguem_possui(int id_jogo) const
         {
             for(size_t i = 0; i < contas.size(); i++)
@@ -415,7 +439,7 @@ class repositorio_usuarios
         };
 
 
-        // deleta da conta
+        // delete da conta
         bool remover(int id_conta)
         {
             for(size_t i = 0; i < contas.size(); i++)
@@ -434,7 +458,7 @@ class repositorio_usuarios
         };
 
 
-        // deleta do jogo da loja
+        // delete do jogo da loja
         bool excluir_jogo(catalogo& loja, int id_jogo) const
         {
             jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
