@@ -323,6 +323,272 @@ inline void buscar_jogo(catalogo& loja)
     };
 }
 
+// MENU DA CONTA
+// mostra os cartões da conta, escondendo o número menos os 4 últimos dígitos
+inline void listar_cartoes(const usuario& conta)
+{
+    const vector <cartao_de_credito>& cartoes = conta.GetCartoes();
+ 
+    for(size_t i = 0; i < cartoes.size(); i++)
+    {
+        string numero = cartoes[i].GetNumero();
+        string final_numero = numero;
+ 
+        if(numero.size() > 4)
+        {
+            final_numero = numero.substr(numero.size() - 4);
+        };
+ 
+        cout << "  " << i + 1 << " - cartão final " << final_numero << " | disponível: " << cartoes[i].GetLimite() - cartoes[i].GetGastos() << " reais" << endl;
+    };
+}
+ 
+ 
+// depósito via pix
+inline void conta_depositar_pix(usuario& conta)
+{
+    pix pix_da_loja; // a classe pix já vem com a chave e a taxa da biblioteca
+ 
+    cout << "\n--- Depósito via pix ---" << endl;
+    cout << "Chave pix da biblioteca: " << pix_da_loja.GetChave() << " (taxa de " << pix_da_loja.GetTaxa() * 100 << "%)" << endl;
+ 
+    double valor = ler_positivo("Valor do depósito: ");
+    if(valor == 0)
+    {
+        return;
+    };
+ 
+    string chave = ler_texto("Chave pix: ");
+    if(chave.size() == 0)
+    {
+        return;
+    };
+ 
+    conta.depositar_pix(valor, chave);
+}
+ 
+ 
+// cadastra um cartão de crédito na conta
+inline void conta_cadastrar_cartao(usuario& conta)
+{
+    cout << "\n--- Cadastrar cartão ---" << endl;
+ 
+    string numero = ler_texto("Número do cartão: ");
+    if(numero.size() == 0)
+    {
+        return;
+    };
+ 
+    int cvc = ler_inteiro("CVC: ");
+    while(cvc < 1 || cvc > 9999)
+    {
+        if(cin.eof())
+        {
+            return;
+        };
+        cvc = ler_inteiro("O CVC tem 3 ou 4 dígitos. CVC: ");
+    };
+ 
+    string validade = ler_texto("Validade (MM/AA): ");
+    if(validade.size() == 0)
+    {
+        return;
+    };
+ 
+    double limite = ler_positivo("Limite em reais: ");
+    if(limite == 0)
+    {
+        return;
+    };
+ 
+    conta.adicionar_cartao(cartao_de_credito(numero, cvc, validade, limite));
+}
+ 
+ 
+// compra um jogo com saldo ou cartão (jogos gratuitos entram direto)
+inline void conta_comprar_jogo(usuario& conta, catalogo& loja)
+{
+    cout << "\n--- Comprar jogo ---" << endl;
+ 
+    int id_jogo = ler_inteiro("Id do jogo: ");
+    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+ 
+    if(jogo == nullptr)
+    {
+        cout << "Não existe jogo com o id: " << id_jogo << endl;
+        return;
+    };
+ 
+    if(conta.possui(id_jogo) == true)
+    {
+        cout << "Você já possui o jogo: " << jogo->GetTitulo() << endl;
+        return;
+    };
+ 
+    if(jogo->EhPago() == false)
+    {
+        conta.adquirir(*jogo);
+        return;
+    };
+ 
+    cout << jogo->GetTitulo() << " custa " << jogo->GetPreco() << " reais. Seu saldo: " << conta.GetSaldo() << " reais." << endl;
+ 
+    int forma = ler_inteiro("Pagar com (1 - saldo, 2 - cartão): ");
+    while(forma != 1 && forma != 2)
+    {
+        if(cin.eof())
+        {
+            return;
+        };
+        forma = ler_inteiro("Digite 1 para saldo ou 2 para cartão: ");
+    };
+ 
+    if(forma == 1)
+    {
+        conta.adquirir(*jogo);
+        return;
+    };
+ 
+    if(conta.GetCartoes().size() == 0)
+    {
+        cout << "Você não tem cartões cadastrados." << endl;
+        return;
+    };
+ 
+    listar_cartoes(conta);
+    int escolhido = ler_inteiro("Número do cartão: ");
+ 
+    // a lista começa em 1 na tela, mas o índice do vector começa em 0
+    conta.adquirir_com_cartao(*jogo, escolhido - 1);
+}
+ 
+ 
+// instala um jogo da biblioteca
+inline void conta_instalar(usuario& conta)
+{
+    int id_jogo = ler_inteiro("Id do jogo para instalar: ");
+    conta.instalar(id_jogo);
+}
+ 
+ 
+// desinstala um jogo, que continua na biblioteca
+inline void conta_desinstalar(usuario& conta)
+{
+    int id_jogo = ler_inteiro("Id do jogo para desinstalar: ");
+    conta.desinstalar(id_jogo);
+}
+ 
+ 
+// devolve um jogo pago e o dinheiro volta para o saldo
+inline void conta_reembolsar(usuario& conta, catalogo& loja)
+{
+    int id_jogo = ler_inteiro("Id do jogo para reembolsar: ");
+    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+ 
+    if(jogo == nullptr)
+    {
+        cout << "Não existe jogo com o id: " << id_jogo << endl;
+        return;
+    };
+ 
+    string confirmacao = ler_texto("Reembolsar o jogo " + jogo->GetTitulo() + "? (s/n): ");
+    if(confirmacao != "s" && confirmacao != "S")
+    {
+        cout << "Reembolso cancelado." << endl;
+        return;
+    };
+ 
+    conta.reembolsar(*jogo);
+}
+ 
+ 
+// menu da conta logada
+inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& usuarios)
+{
+    int opcao = -1;
+ 
+    while(opcao != 0)
+    {
+        cout << "\n===== Conta de " << conta->Getnome() << " | Saldo: " << conta->GetSaldo() << " reais =====" << endl;
+        cout << "1 - Ver biblioteca" << endl;
+        cout << "2 - Depositar via pix" << endl;
+        cout << "3 - Cadastrar cartão" << endl;
+        cout << "4 - Comprar jogo" << endl;
+        cout << "5 - Instalar jogo" << endl;
+        cout << "6 - Desinstalar jogo" << endl;
+        cout << "7 - Reembolsar jogo" << endl;
+        cout << "0 - Sair da conta" << endl;
+ 
+        opcao = ler_inteiro("Escolha: ");
+ 
+        switch(opcao)
+        {
+            case 1:
+                conta->mostrar_biblioteca(loja);
+                break;
+            case 2:
+                conta_depositar_pix(*conta);
+                break;
+            case 3:
+                conta_cadastrar_cartao(*conta);
+                break;
+            case 4:
+                conta_comprar_jogo(*conta, loja);
+                break;
+            case 5:
+                conta_instalar(*conta);
+                break;
+            case 6:
+                conta_desinstalar(*conta);
+                break;
+            case 7:
+                conta_reembolsar(*conta, loja);
+                break;
+            case 0:
+                cout << "Saindo da conta..." << endl;
+                break;
+            default:
+                cout << "Opção inválida." << endl;
+        };
+ 
+        // as opções 2 a 7 podem mudar a conta, então ela é salva no banco
+        if(opcao >= 2 && opcao <= 7)
+        {
+            usuarios.salvar(conta);
+        };
+    };
+}
+ 
+ 
+// pede nome e senha e abre o menu da conta
+inline void entrar_na_conta(catalogo& loja, repositorio_usuarios& usuarios)
+{
+    cout << "\n--- Entrar na conta ---" << endl;
+ 
+    string nome = ler_texto("Nome da conta: ");
+    if(nome.size() == 0)
+    {
+        return;
+    };
+ 
+    string senha = ler_texto("Senha: ");
+    if(senha.size() == 0)
+    {
+        return;
+    };
+ 
+    usuario* conta = usuarios.buscar_por_nome(nome);
+ 
+    // a mesma mensagem nos dois casos, para não revelar quais contas existem
+    if(conta == nullptr || conta->verificar_senha(senha) == false)
+    {
+        cout << "Nome ou senha incorretos." << endl;
+        return;
+    };
+ 
+    cout << "Bem-vindo, " << conta->Getnome() << "!" << endl;
+    menu_da_conta(conta, loja, usuarios);
+}
 
 // menu principal
 inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
@@ -341,6 +607,7 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "7 - Remover jogo" << endl;
         cout << "8 - Atualizar jogo" << endl;
         cout << "9 - Buscar jogo" << endl;
+        cout << "10 - Entrar na conta" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -373,6 +640,9 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 9:
                 buscar_jogo(loja);
+                break;
+            case 10:
+                entrar_na_conta(loja, usuarios);
                 break;
             case 0:
                 cout << "Saindo..." << endl;
