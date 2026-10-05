@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <vector>
 #include "entrada.hpp"
 #include "catalogo.hpp"
 #include "usuario.hpp"
@@ -270,6 +271,59 @@ inline void remover_jogo(catalogo& loja, repositorio_usuarios& usuarios)
 }
 
 
+// busca jogos pelo id ou por parte do título
+inline void buscar_jogo(catalogo& loja)
+{
+    cout << "\n--- Buscar jogo ---" << endl;
+
+    int opcao = ler_inteiro("Buscar por (1 - id, 2 - título): ");
+    while(opcao != 1 && opcao != 2)
+    {
+        if(cin.eof())
+        {
+            return;
+        };
+        opcao = ler_inteiro("Digite 1 para id ou 2 para título: ");
+    };
+
+    if(opcao == 1)
+    {
+        int id_jogo = ler_inteiro("Id do jogo: ");
+        jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+
+        if(jogo == nullptr)
+        {
+            cout << "Não existe jogo com o id: " << id_jogo << endl;
+            return;
+        };
+
+        jogo->mostrar_informacoes();
+    }
+    else
+    {
+        string trecho = ler_texto("Parte do título: ");
+        if(trecho.size() == 0)
+        {
+            return;
+        };
+
+        vector <jogos_gratuitos*> encontrados = loja.buscar_por_trecho(trecho);
+
+        if(encontrados.size() == 0)
+        {
+            cout << "Nenhum jogo encontrado com: " << trecho << endl;
+            return;
+        };
+
+        cout << encontrados.size() << " jogo(s) encontrado(s):" << endl;
+        for(size_t i = 0; i < encontrados.size(); i++)
+        {
+            encontrados[i]->mostrar_informacoes();
+        };
+    };
+}
+
+
 // menu principal
 inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
 {
@@ -286,6 +340,7 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "6 - Remover conta" << endl;
         cout << "7 - Remover jogo" << endl;
         cout << "8 - Atualizar jogo" << endl;
+        cout << "9 - Buscar jogo" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -315,6 +370,9 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 8:
                 atualizar_jogo(loja);
+                break;
+            case 9:
+                buscar_jogo(loja);
                 break;
             case 0:
                 cout << "Saindo..." << endl;

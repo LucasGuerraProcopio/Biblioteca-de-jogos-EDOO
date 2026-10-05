@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cctype>
 #include "tipos_jogos.hpp"
 #include "banco_de_dados.hpp"
 using namespace std;
@@ -15,6 +16,16 @@ class catalogo
         vector <jogos_gratuitos*> jogos;
         int proximo_id = 1;
         banco_de_dados* banco = nullptr; // Banco onde os jogos são salvos
+
+        // copia do texto com as letras em minúsculas
+        static string para_minusculas(string texto)
+        {
+            for(size_t i = 0; i < texto.size(); i++)
+            {
+                texto[i] = (char)tolower((unsigned char)texto[i]);
+            };
+            return texto;
+        };
 
 
     // Operações com o catálogo
@@ -45,12 +56,23 @@ class catalogo
             };
 
             novo_jogo->SetId(proximo_id);
-            proximo_id++;
-            jogos.push_back(novo_jogo);
+
             if(banco != nullptr)
             {
-                banco->inserir_jogo(*novo_jogo);
+                // se o banco recusar o jogo, ele não entra na loja
+                if(banco->inserir_jogo(*novo_jogo) == false)
+                {
+                    cout << "O jogo " << novo_jogo->GetTitulo() << " não foi cadastrado." << endl;
+                    delete novo_jogo;
+                    return -1;
+                };
+
+                // guarda o maior id usado, assim o id de um jogo removido nunca é reaproveitado
+                banco->salvar_controle("maior_id_jogo", proximo_id);
             };
+
+            proximo_id++;
+            jogos.push_back(novo_jogo);
             return novo_jogo->GetId();
         };
 
@@ -74,6 +96,16 @@ class catalogo
                     proximo_id = jogos_salvos[i]->GetId() + 1;
                 };
             };
+
+            // o id de um jogo removido não volta, mesmo que ele fosse o último
+            int maior_id_usado = banco->ler_controle("maior_id_jogo");
+
+            if(maior_id_usado >= proximo_id)
+            {
+                proximo_id = maior_id_usado + 1;
+            };
+
+            banco->salvar_controle("maior_id_jogo", proximo_id - 1);
 
             return (int)jogos_salvos.size();
         };
@@ -134,6 +166,23 @@ class catalogo
                 };
             };
             return nullptr;
+        };
+
+
+        // devolve os jogos cujo título contém o texto, sem diferenciar maiúsculas de minúsculas
+        vector <jogos_gratuitos*> buscar_por_trecho(string trecho) const
+        {
+            vector <jogos_gratuitos*> encontrados;
+            string trecho_minusculo = para_minusculas(trecho);
+
+            for(size_t i = 0; i < jogos.size(); i++)
+            {
+                if(para_minusculas(jogos[i]->GetTitulo()).find(trecho_minusculo) != string::npos)
+                {
+                    encontrados.push_back(jogos[i]);
+                };
+            };
+            return encontrados;
         };
 
 
