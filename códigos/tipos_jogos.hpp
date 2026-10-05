@@ -80,6 +80,16 @@ class jogos_gratuitos
             return false;
         };
 
+        // tipo do jogo como fica salvo na coluna tipo do banco
+        string GetTipo() const
+        {
+            if(EhPago() == true)
+            {
+                return "pago";
+            };
+            return "gratuito";
+        };
+
 
         // A cada bloco temos funções que trabalham em conjunto
         // id do jogo

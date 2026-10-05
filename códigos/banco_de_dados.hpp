@@ -30,11 +30,36 @@ class banco_de_dados
             char* erro = nullptr;
             if(sqlite3_exec(conexao, comando.c_str(), nullptr, nullptr, &erro) != SQLITE_OK)
             {
-                cout << "Erro no banco de dados: " << erro << endl;
+                // erro pode ser nullptr (ex: conexão fechada), e imprimir nullptr trava o cout
+                cout << "Erro no banco de dados: " << (erro != nullptr ? erro : "erro desconhecido") << endl;
                 sqlite3_free(erro);
                 return false;
             };
             return true;
+        };
+
+        // verifica se a tabela já tem a coluna (usado para atualizar bancos antigos)
+        bool coluna_existe(const string& tabela, const string& coluna)
+        {
+            bool existe = false;
+            sqlite3_stmt* comando = nullptr;
+
+            if(sqlite3_prepare_v2(conexao, ("PRAGMA table_info(" + tabela + ")").c_str(), -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            while(sqlite3_step(comando) == SQLITE_ROW)
+            {
+                if(ler_coluna_texto(comando, 1) == coluna)
+                {
+                    existe = true;
+                };
+            };
+
+            sqlite3_finalize(comando);
+            return existe;
         };
 
         // le uma coluna de texto e devolve "" se estiver vazia
@@ -57,6 +82,8 @@ class banco_de_dados
             if(sqlite3_open(arquivo.c_str(), &conexao) != SQLITE_OK)
             {
                 cout << "Não foi possível abrir o banco: " << sqlite3_errmsg(conexao) << endl;
+                sqlite3_close(conexao);
+                conexao = nullptr;
                 return;
             };
 
@@ -66,7 +93,18 @@ class banco_de_dados
                      "tamanho REAL NOT NULL, "
                      "preco REAL NOT NULL DEFAULT 0, "
                      "usuario TEXT NOT NULL DEFAULT '', "
-                     "senha TEXT NOT NULL DEFAULT '')");
+                     "senha TEXT NOT NULL DEFAULT '', "
+                     "tipo TEXT NOT NULL DEFAULT 'gratuito')");
+
+            // banco criado antes da coluna tipo: adiciona a coluna e preenche pelo preço
+            if(coluna_existe("jogos", "tipo") == false)
+            {
+                executar("ALTER TABLE jogos ADD COLUMN tipo TEXT NOT NULL DEFAULT 'gratuito'");
+                executar("UPDATE jogos SET tipo = 'pago' WHERE preco > 0");
+            };
+
+            // valores de controle (maior id de jogo já usado, jogos iniciais já cadastrados)
+            executar("CREATE TABLE IF NOT EXISTS controle (nome TEXT PRIMARY KEY, valor INTEGER NOT NULL)");
 
             executar("CREATE TABLE IF NOT EXISTS usuarios ("
                      "id INTEGER PRIMARY KEY, "
@@ -100,12 +138,69 @@ class banco_de_dados
         banco_de_dados& operator=(const banco_de_dados&) = delete;
 
 
+        // diz se o banco foi aberto com sucesso
+        bool aberto() const
+        {
+            return conexao != nullptr;
+        };
+
+
+        // CONTROLE
+        // lê um valor guardado na tabela controle, devolve 0 se ainda não existe
+        int ler_controle(const string& nome)
+        {
+            int valor = 0;
+            sqlite3_stmt* comando = nullptr;
+
+            if(sqlite3_prepare_v2(conexao, "SELECT valor FROM controle WHERE nome = ?", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return 0;
+            };
+
+            sqlite3_bind_text(comando, 1, nome.c_str(), -1, SQLITE_TRANSIENT);
+
+            if(sqlite3_step(comando) == SQLITE_ROW)
+            {
+                valor = sqlite3_column_int(comando, 0);
+            };
+
+            sqlite3_finalize(comando);
+            return valor;
+        };
+
+        // guarda um valor na tabela controle, se o nome já existe troca o valor
+        bool salvar_controle(const string& nome, int valor)
+        {
+            sqlite3_stmt* comando = nullptr;
+
+            if(sqlite3_prepare_v2(conexao, "INSERT OR REPLACE INTO controle (nome, valor) VALUES (?, ?)", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_text(comando, 1, nome.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int(comando, 2, valor);
+
+            bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
+
+            sqlite3_finalize(comando);
+
+            if(sucesso == false)
+            {
+                cout << "Não foi possível salvar o controle " << nome << " no banco." << endl;
+            };
+            return sucesso;
+        };
+
+
         // JOGOS
         // salva o jogo no banco
         bool inserir_jogo(const jogos_gratuitos& jogo)
         {
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "INSERT INTO jogos (id, titulo, tamanho, preco, usuario, senha) VALUES (?, ?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "INSERT INTO jogos (id, titulo, tamanho, preco, usuario, senha, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return false;
@@ -117,14 +212,16 @@ class banco_de_dados
             sqlite3_bind_double(comando, 4, jogo.GetPreco());
             sqlite3_bind_text(comando, 5, jogo.GetConta().c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(comando, 6, jogo.GetSenha().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(comando, 7, jogo.GetTipo().c_str(), -1, SQLITE_TRANSIENT);
 
             bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
+            string motivo = sqlite3_errmsg(conexao);
 
             sqlite3_finalize(comando);
 
             if(sucesso == false)
             {
-                cout << "O jogo " << jogo.GetTitulo() << " já está salvo no banco." << endl;
+                cout << "Não foi possível salvar o jogo " << jogo.GetTitulo() << " no banco: " << motivo << endl;
             };
             return sucesso;
         };
@@ -136,7 +233,7 @@ class banco_de_dados
             vector <jogos_gratuitos*> jogos_salvos;
 
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco, usuario, senha FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco, usuario, senha, tipo FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return jogos_salvos;
@@ -145,15 +242,16 @@ class banco_de_dados
             while(sqlite3_step(comando) == SQLITE_ROW)
             {
                 int id_jogo = sqlite3_column_int(comando, 0);
-                string titulo = (const char*)sqlite3_column_text(comando, 1);
+                string titulo = ler_coluna_texto(comando, 1);
                 double tamanho = sqlite3_column_double(comando, 2);
                 double preco = sqlite3_column_double(comando, 3);
-                string usuario = (const char*)sqlite3_column_text(comando, 4);
-                string senha = (const char*)sqlite3_column_text(comando, 5);
+                string usuario = ler_coluna_texto(comando, 4);
+                string senha = ler_coluna_texto(comando, 5);
+                string tipo = ler_coluna_texto(comando, 6);
 
                 jogos_gratuitos* jogo = nullptr;
 
-                if(preco > 0)
+                if(tipo == "pago")
                 {
                     jogo = new jogos_pagos(titulo, tamanho, senha, preco, usuario);
                 }
@@ -174,7 +272,7 @@ class banco_de_dados
         bool atualizar_jogo(const jogos_gratuitos& jogo)
         {
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "UPDATE jogos SET titulo = ?, tamanho = ?, preco = ?, usuario = ?, senha = ? WHERE id = ?", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "UPDATE jogos SET titulo = ?, tamanho = ?, preco = ?, usuario = ?, senha = ?, tipo = ? WHERE id = ?", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return false;
@@ -185,7 +283,8 @@ class banco_de_dados
             sqlite3_bind_double(comando, 3, jogo.GetPreco());
             sqlite3_bind_text(comando, 4, jogo.GetConta().c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(comando, 5, jogo.GetSenha().c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_bind_int(comando, 6, jogo.GetId());
+            sqlite3_bind_text(comando, 6, jogo.GetTipo().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int(comando, 7, jogo.GetId());
 
             bool sucesso = (sqlite3_step(comando) == SQLITE_DONE) && (sqlite3_changes(conexao) > 0);
 
