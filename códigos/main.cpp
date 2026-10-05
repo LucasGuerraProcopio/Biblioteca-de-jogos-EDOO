@@ -16,7 +16,7 @@ int main()
 
     if(carregados == 0)
     {
-        loja.adicionar(new jogos_gratuitos("Fortinite", 90, "Torres_tortas", "Tripaboy_"));
+        loja.adicionar(new jogos_gratuitos("Fortnite", 90, "Torres_tortas", "Tripaboy_"));
         loja.adicionar(new jogos_gratuitos("Roblox", 5, "29/01/2021", "Francisco"));
         loja.adicionar(new jogos_gratuitos("Five nights at Freddy", 10, "FFCBG123456"));
         loja.adicionar(new jogos_gratuitos("Brawl Stars", 0.8, "HIPERCARGA67", "Piriquito Deuz"));
