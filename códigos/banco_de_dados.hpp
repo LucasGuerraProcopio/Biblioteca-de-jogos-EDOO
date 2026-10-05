@@ -170,6 +170,33 @@ class banco_de_dados
             return jogos_salvos;
         };
 
+        // atualiza os dados de um jogo que já está no banco
+        bool atualizar_jogo(const jogos_gratuitos& jogo)
+        {
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "UPDATE jogos SET titulo = ?, tamanho = ?, preco = ?, usuario = ?, senha = ? WHERE id = ?", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_text(comando, 1, jogo.GetTitulo().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_double(comando, 2, jogo.GetTamanho());
+            sqlite3_bind_double(comando, 3, jogo.GetPreco());
+            sqlite3_bind_text(comando, 4, jogo.GetConta().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(comando, 5, jogo.GetSenha().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int(comando, 6, jogo.GetId());
+
+            bool sucesso = (sqlite3_step(comando) == SQLITE_DONE) && (sqlite3_changes(conexao) > 0);
+
+            sqlite3_finalize(comando);
+
+            if(sucesso == false)
+            {
+                cout << "Não foi possível atualizar o jogo " << jogo.GetTitulo() << " no banco." << endl;
+            };
+            return sucesso;
+        };
 
         // apaga o jogo do banco pelo id
         bool remover_jogo(int id_jogo)
