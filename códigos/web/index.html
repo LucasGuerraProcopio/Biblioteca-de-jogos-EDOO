@@ -38,7 +38,12 @@
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7DB0FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/></svg>
       <span class="text-lg font-semibold">Biblioteca de Jogos</span>
     </div>
-    <a href="#conta" class="min-h-11 inline-flex items-center px-5 rounded-md border border-borda bg-elevado font-medium hover:border-suave">Entrar na conta</a>
+    <!-- muda conforme há alguém logado (app.js) -->
+    <a id="cabecalho-entrar" href="#conta" class="min-h-11 inline-flex items-center px-5 rounded-md border border-borda bg-elevado font-medium hover:border-suave">Entrar na conta</a>
+    <div id="cabecalho-conectado" class="flex flex-wrap items-center gap-3" hidden>
+      <span class="text-suave">Conectado como <span id="cabecalho-nome" class="text-texto font-semibold"></span></span>
+      <button type="button" id="cabecalho-sair" class="min-h-11 px-5 rounded-md border border-borda bg-elevado font-medium hover:border-suave">Sair da conta</button>
+    </div>
   </header>
 
   <div class="flex-1 flex flex-wrap">
@@ -114,8 +119,86 @@
       </section>
 
       <section id="tela-conta" data-tela="conta" class="flex-1 flex flex-col gap-4" hidden>
-        <h1 class="text-[26px] font-semibold">Minha conta</h1>
-        <p class="text-suave">O login e a conta entram aqui nos passos 4 a 6.</p>
+        <div id="conta-area-acesso" class="flex-1 flex items-start justify-center pt-10">
+
+          <!-- formulário de acesso: aparece quando ninguém está logado -->
+          <div id="conta-acesso" class="w-full max-w-[420px] rounded-xl bg-painel border border-borda p-7 flex flex-col gap-5">
+            <div role="tablist" aria-label="Escolha" class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-fundo border border-borda">
+              <button type="button" role="tab" id="aba-entrar" aria-selected="true" class="min-h-10 rounded-md font-medium text-suave aria-selected:bg-elevado aria-selected:text-texto">Entrar</button>
+              <button type="button" role="tab" id="aba-criar" aria-selected="false" class="min-h-10 rounded-md font-medium text-suave aria-selected:bg-elevado aria-selected:text-texto">Criar conta</button>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <h1 id="acesso-titulo" class="text-[22px] font-semibold">Entrar na conta</h1>
+              <p id="acesso-subtitulo" class="text-suave">Use o nome e a senha da sua conta.</p>
+            </div>
+
+            <form id="acesso-form" class="flex flex-col gap-5" novalidate>
+              <div class="flex flex-col gap-2">
+                <label for="acesso-nome" class="text-[#C9D1DB] font-medium">Nome da conta<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="acesso-nome" type="text" autocomplete="username" required aria-required="true" class="min-h-11 px-3.5 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+              <div class="flex flex-col gap-2">
+                <label for="acesso-senha" class="text-[#C9D1DB] font-medium">Senha<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="acesso-senha" type="password" autocomplete="current-password" required aria-required="true" class="min-h-11 px-3.5 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+              <div id="acesso-confirma-campo" class="flex flex-col gap-2" hidden>
+                <label for="acesso-confirma" class="text-[#C9D1DB] font-medium">Confirmar senha<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="acesso-confirma" type="password" autocomplete="new-password" aria-required="true" class="min-h-11 px-3.5 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+              <p class="text-[13px] text-suave"><span class="text-[#FF6B6B]">*</span> Campo obrigatório</p>
+              <button type="submit" id="acesso-botao" class="min-h-[46px] rounded-md bg-destaque text-white font-semibold hover:brightness-110">Entrar</button>
+            </form>
+
+            <div id="acesso-status" role="status" hidden></div>
+          </div>
+
+        </div>
+
+        <!-- painel da conta: aparece depois de entrar -->
+        <div id="conta-painel" class="flex flex-col gap-5" hidden>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h1 class="text-[26px] font-semibold">Minha conta</h1>
+            <a href="#catalogo" class="min-h-11 inline-flex items-center px-[18px] rounded-md bg-destaque text-white font-semibold hover:brightness-110">Comprar jogos</a>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div class="rounded-lg bg-painel border border-borda px-[18px] py-4 flex flex-col gap-1.5">
+              <span class="text-[13px] uppercase tracking-wider text-suave">Saldo</span>
+              <span id="conta-saldo" class="font-mono text-[26px] font-medium"></span>
+            </div>
+            <div class="rounded-lg bg-painel border border-borda px-[18px] py-4 flex flex-col gap-1.5">
+              <span class="text-[13px] uppercase tracking-wider text-suave">Jogos na biblioteca</span>
+              <span id="conta-total-jogos" class="font-mono text-[26px] font-medium"></span>
+            </div>
+            <div class="rounded-lg bg-painel border border-borda px-[18px] py-4 flex flex-col gap-1.5">
+              <span class="text-[13px] uppercase tracking-wider text-suave">Horas jogadas</span>
+              <span id="conta-total-horas" class="font-mono text-[26px] font-medium"></span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-4">
+            <div class="flex-[999_1_480px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto">
+              <h2 class="px-4 pt-3.5 pb-1.5 text-[17px] font-semibold">Biblioteca</h2>
+              <table class="w-full border-collapse">
+                <thead>
+                  <tr class="text-left text-[13px] uppercase tracking-wider text-suave">
+                    <th class="px-4 py-2.5 font-medium border-b border-borda">Jogo</th>
+                    <th class="px-4 py-2.5 font-medium border-b border-borda">Situação</th>
+                    <th class="px-4 py-2.5 font-medium border-b border-borda text-right">Horas</th>
+                    <th class="px-4 py-2.5 font-medium border-b border-borda">Adquirido em</th>
+                    <th class="px-4 py-2.5 font-medium border-b border-borda">Pagamento</th>
+                  </tr>
+                </thead>
+                <tbody id="biblioteca-linhas"></tbody>
+              </table>
+              <p id="biblioteca-vazia" class="py-8 px-4 text-center text-suave" hidden>Sua biblioteca está vazia. Que tal pegar um jogo no catálogo?</p>
+            </div>
+
+            <!-- ações do jogo selecionado (preenchido pelo app.js) -->
+            <aside id="biblioteca-detalhes" aria-label="Jogo selecionado" class="flex-[1_1_260px] max-w-[340px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-4"></aside>
+          </div>
+        </div>
       </section>
 
       <section id="tela-admin" data-tela="admin" class="flex-1 flex flex-col gap-4" hidden>

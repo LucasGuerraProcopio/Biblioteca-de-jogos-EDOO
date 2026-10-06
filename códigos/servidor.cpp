@@ -2,6 +2,7 @@
 // O C++ continua com toda a lógica; a interface web (pasta web/) só chama a API
 #include "httplib.h" // precisa vir antes dos outros includes (no Windows ele inclui o winsock)
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -171,6 +172,319 @@ int main(int argc, char* argv[])
 
         resposta.set_content("{\"ok\": true, \"jogos\": " + jogos_json +
                              ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // ===== Conta logada =====
+    // o programa roda no computador de uma pessoa só, então o servidor guarda uma única
+    // conta logada; guardamos o id (e não o ponteiro) porque a conta pode ser removida
+    int id_logado = -1;
+
+    // devolve a conta logada, ou nullptr se ninguém entrou
+    auto conta_logada = [&]() -> usuario*
+    {
+        if(id_logado == -1)
+        {
+            return nullptr;
+        };
+        return usuarios.buscar_por_id(id_logado);
+    };
+
+    // monta o JSON da conta logada (dados, biblioteca e cartões), ou null se ninguém entrou
+    auto conta_json = [&]() -> string
+    {
+        usuario* conta = conta_logada();
+        if(conta == nullptr)
+        {
+            return "null";
+        };
+
+        const vector <cartao_de_credito>& cartoes = conta->GetCartoes();
+        const vector <item_biblioteca>& biblioteca = conta->GetBiblioteca();
+
+        string itens = "[";
+        for(size_t i = 0; i < biblioteca.size(); i++)
+        {
+            const item_biblioteca& item = biblioteca[i];
+            jogo_base* jogo = loja.buscar_por_id(item.id_jogo);
+
+            // final do cartão usado na compra (vazio se não foi no cartão)
+            string cartao_final = "";
+            if(item.forma_pagamento == 2 && item.cartao_pago >= 0 && item.cartao_pago < (int)cartoes.size())
+            {
+                cartao_final = cartoes[item.cartao_pago].GetNumero();
+            };
+
+            if(i > 0)
+            {
+                itens += ", ";
+            };
+
+            itens += "{\"id\": " + to_string(item.id_jogo) +
+                     ", \"titulo\": " + json_texto(jogo != nullptr ? jogo->GetTitulo() : "(jogo removido)") +
+                     ", \"pago\": " + string(jogo != nullptr && jogo->EhPago() ? "true" : "false") +
+                     ", \"instalado\": " + string(item.instalado ? "true" : "false") +
+                     ", \"horas\": " + to_string(item.horas_jogadas) +
+                     ", \"data_compra\": " + to_string(item.data_compra) +
+                     ", \"forma\": " + to_string(item.forma_pagamento) +
+                     ", \"valor_pago\": " + json_numero(item.valor_pago) +
+                     ", \"cartao_final\": " + json_texto(cartao_final) + "}";
+        };
+        itens += "]";
+
+        string lista_cartoes = "[";
+        for(size_t i = 0; i < cartoes.size(); i++)
+        {
+            if(i > 0)
+            {
+                lista_cartoes += ", ";
+            };
+
+            lista_cartoes += "{\"indice\": " + to_string(i) +
+                             ", \"final\": " + json_texto(cartoes[i].GetNumero()) +
+                             ", \"validade\": " + json_texto(cartoes[i].GetValidade()) +
+                             ", \"limite\": " + json_numero(cartoes[i].GetLimite()) +
+                             ", \"gastos\": " + json_numero(cartoes[i].GetGastos()) + "}";
+        };
+        lista_cartoes += "]";
+
+        return "{\"id\": " + to_string(conta->GetId()) +
+               ", \"nome\": " + json_texto(conta->Getnome()) +
+               ", \"saldo\": " + json_numero(conta->GetSaldo()) +
+               ", \"biblioteca\": " + itens +
+               ", \"cartoes\": " + lista_cartoes +
+               ", \"prazo_reembolso_dias\": " + to_string(PRAZO_REEMBOLSO_DIAS) +
+               ", \"limite_horas_reembolso\": " + to_string(LIMITE_HORAS_REEMBOLSO) + "}";
+    };
+
+    // resposta padrão das ações da conta: se deu certo, a conta atualizada e as mensagens do cout
+    auto responder_conta = [&](httplib::Response& resposta, bool sucesso, const captura_cout& captura)
+    {
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") + ", \"conta\": " + conta_json() +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    };
+
+    // diz à tela se há alguém logado (usado quando a página é aberta ou recarregada)
+    servidor.Get("/api/sessao", [&](const httplib::Request&, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        resposta.set_content("{\"ok\": true, \"conta\": " + conta_json() + ", \"mensagens\": []}", "application/json");
+    });
+
+    // entrar na conta: mesma regra do entrar_na_conta do menu
+    servidor.Post("/api/entrar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+
+        string nome = pedido.get_param_value("nome");
+        string senha = pedido.get_param_value("senha");
+        bool sucesso = false;
+
+        if(nome.size() == 0 || senha.size() == 0)
+        {
+            cout << "Preencha o nome e a senha." << endl;
+        }
+        else
+        {
+            usuario* conta = usuarios.buscar_por_nome(nome);
+
+            // a mesma mensagem nos dois casos, para não revelar quais contas existem
+            if(conta == nullptr || conta->verificar_senha(senha) == false)
+            {
+                cout << "Nome ou senha incorretos." << endl;
+            }
+            else
+            {
+                id_logado = conta->GetId();
+                cout << "Bem-vindo, " << conta->Getnome() << "!" << endl;
+                sucesso = true;
+            };
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") + ", \"conta\": " + conta_json() +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // criar conta: usa o criar() do repositório
+    servidor.Post("/api/contas", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+
+        string nome = pedido.get_param_value("nome");
+        string senha = pedido.get_param_value("senha");
+        bool sucesso = false;
+
+        if(nome.size() == 0 || senha.size() == 0)
+        {
+            cout << "Preencha o nome e a senha." << endl;
+        }
+        else
+        {
+            usuario* nova_conta = usuarios.criar(nome, senha);
+
+            if(nova_conta != nullptr)
+            {
+                cout << "Conta criada com o id " << nova_conta->GetId() << ". Agora é só entrar." << endl;
+                sucesso = true;
+            };
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // sair da conta
+    servidor.Post("/api/sair", [&](const httplib::Request&, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+
+        if(id_logado != -1)
+        {
+            id_logado = -1;
+            cout << "Você saiu da conta." << endl;
+        };
+
+        resposta.set_content("{\"ok\": true, \"conta\": null, \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // ===== Ações da conta logada =====
+    // cada ação chama o método do usuario e depois salva a conta no banco
+
+    // comprar ou pegar um jogo: forma=saldo ou forma=cartao&cartao=0
+    servidor.Post("/api/comprar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        jogo_base* jogo = loja.buscar_por_id(atoi(pedido.get_param_value("id").c_str()));
+
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else if(jogo == nullptr)
+        {
+            cout << "Esse jogo não existe." << endl;
+        }
+        else if(pedido.get_param_value("forma") == "cartao")
+        {
+            sucesso = conta->adquirir_com_cartao(*jogo, atoi(pedido.get_param_value("cartao").c_str()));
+        }
+        else
+        {
+            sucesso = conta->adquirir(*jogo);
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    // instalar, desinstalar e jogar usam o id do jogo
+    servidor.Post("/api/instalar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else
+        {
+            sucesso = conta->instalar(atoi(pedido.get_param_value("id").c_str()));
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    servidor.Post("/api/desinstalar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else
+        {
+            sucesso = conta->desinstalar(atoi(pedido.get_param_value("id").c_str()));
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    servidor.Post("/api/jogar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else
+        {
+            sucesso = conta->jogar(atoi(pedido.get_param_value("id").c_str()),
+                                   atoi(pedido.get_param_value("horas").c_str()));
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    // reembolso: as regras (14 dias, menos de 2 horas, devolver no saldo ou no cartão) ficam no usuario
+    servidor.Post("/api/reembolsar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        jogo_base* jogo = loja.buscar_por_id(atoi(pedido.get_param_value("id").c_str()));
+
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else if(jogo == nullptr)
+        {
+            cout << "Esse jogo não existe." << endl;
+        }
+        else
+        {
+            sucesso = conta->reembolsar(*jogo);
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
     });
 
     cout << "Interface disponível em http://localhost:8080" << endl;

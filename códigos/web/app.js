@@ -24,15 +24,30 @@ document.getElementById("limpar-mensagens").addEventListener("click", function (
 
 // ===== Comunicação com o C++ =====
 
-// chama um caminho da API; sem "dados" faz um GET, com "dados" faz um POST com JSON
+// chama um caminho da API; sem "dados" faz um GET, com "dados" faz um POST
+// os dados vão como formulário (nome=ana&senha=123), que o httplib já sabe ler no C++
 // as mensagens que vierem na resposta já aparecem no painel
 async function api(caminho, dados) {
   const opcoes = dados === undefined
     ? {}
-    : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) };
+    : { method: "POST", body: new URLSearchParams(dados) };
+
+  let resposta;
+  try {
+    resposta = await fetch(caminho, opcoes);
+  } catch (erro) {
+    mostrarMensagens(["Não foi possível falar com o servidor. Ele está rodando?"]);
+    return { ok: false, mensagens: [] };
+  }
+
+  // o servidor respondeu, mas não conhece esse caminho (ex.: servidor antigo ainda rodando)
+  if (resposta.status === 404) {
+    const texto = "O servidor não conhece " + caminho.split("?")[0] + ". Ele foi recompilado e reiniciado?";
+    mostrarMensagens([texto]);
+    return { ok: false, mensagens: [texto] };
+  }
 
   try {
-    const resposta = await fetch(caminho, opcoes);
     const json = await resposta.json();
 
     if (json.mensagens) {
@@ -40,8 +55,9 @@ async function api(caminho, dados) {
     }
     return json;
   } catch (erro) {
-    mostrarMensagens(["Não foi possível falar com o servidor. Ele está rodando?"]);
-    return { ok: false };
+    const texto = "Resposta inválida do servidor (código " + resposta.status + ").";
+    mostrarMensagens([texto]);
+    return { ok: false, mensagens: [texto] };
   }
 }
 
@@ -216,13 +232,98 @@ function desenharDetalhes() {
   }
   painel.appendChild(lista);
 
-  // a compra entra no passo 5; por enquanto o botão fica desativado
-  const botao = criar("button", "min-h-11 rounded-md bg-borda text-suave font-semibold cursor-not-allowed",
-    jogo.pago ? "Comprar" : "Adicionar à biblioteca");
+  desenharCompra(painel, jogo);
+}
+
+// parte de baixo do painel: o botão de compra muda conforme a situação
+function desenharCompra(painel, jogo) {
+  // ninguém logado: botão desativado com o aviso
+  if (contaAtual === null) {
+    const botao = criar("button", "min-h-11 rounded-md bg-borda text-suave font-semibold cursor-not-allowed",
+      jogo.pago ? "Comprar" : "Adicionar à biblioteca");
+    botao.type = "button";
+    botao.disabled = true;
+    painel.appendChild(botao);
+    painel.appendChild(criar("p", "text-[13px] text-suave", "Entre na conta para adicionar jogos à sua biblioteca."));
+    return;
+  }
+
+  // a conta já tem o jogo
+  const jaPossui = contaAtual.biblioteca.some(function (item) { return item.id === jogo.id; });
+  if (jaPossui) {
+    const botao = criar("button", "min-h-11 rounded-md bg-borda text-suave font-semibold cursor-not-allowed", "Já está na sua biblioteca");
+    botao.type = "button";
+    botao.disabled = true;
+    painel.appendChild(botao);
+    return;
+  }
+
+  const status = criar("div", "", "");
+  status.hidden = true;
+
+  // jogo gratuito: entra direto, sem escolher pagamento
+  if (!jogo.pago) {
+    const botao = criar("button", "min-h-11 rounded-md bg-destaque text-white font-semibold hover:brightness-110", "Adicionar à biblioteca");
+    botao.type = "button";
+    botao.addEventListener("click", function () { comprarJogo(jogo, { id: jogo.id }, status); });
+    painel.appendChild(botao);
+    painel.appendChild(status);
+    return;
+  }
+
+  // jogo pago: escolhe saldo ou um dos cartões cadastrados
+  const grupo = criar("fieldset", "flex flex-col gap-2 border-t border-linha pt-3");
+  grupo.appendChild(criar("legend", "text-[#C9D1DB] font-medium mb-1", "Pagar com"));
+
+  const opcoes = [{ valor: "saldo", texto: "Saldo (" + formatoReais.format(contaAtual.saldo) + ")" }];
+  for (const cartao of contaAtual.cartoes) {
+    opcoes.push({
+      valor: "cartao-" + cartao.indice,
+      texto: "Cartão final " + cartao.final + " (disponível " + formatoReais.format(cartao.limite - cartao.gastos) + ")"
+    });
+  }
+
+  opcoes.forEach(function (opcao, posicao) {
+    const rotulo = criar("label", "flex items-center gap-2.5 min-h-10 cursor-pointer");
+    const radio = criar("input", "accent-[#2F6FE0] w-4 h-4");
+    radio.type = "radio";
+    radio.name = "forma-pagamento";
+    radio.value = opcao.valor;
+    radio.checked = posicao === 0;
+    rotulo.appendChild(radio);
+    rotulo.appendChild(criar("span", "", opcao.texto));
+    grupo.appendChild(rotulo);
+  });
+  painel.appendChild(grupo);
+
+  if (contaAtual.cartoes.length === 0) {
+    painel.appendChild(criar("p", "text-[13px] text-suave", "Para pagar com cartão, cadastre um na Carteira."));
+  }
+
+  const botao = criar("button", "min-h-11 rounded-md bg-destaque text-white font-semibold hover:brightness-110",
+    "Comprar por " + formatoReais.format(jogo.preco));
   botao.type = "button";
-  botao.disabled = true;
+  botao.addEventListener("click", function () {
+    const escolhida = painel.querySelector("input[name=forma-pagamento]:checked").value;
+    const dados = { id: jogo.id, forma: "saldo" };
+    if (escolhida.startsWith("cartao-")) {
+      dados.forma = "cartao";
+      dados.cartao = escolhida.slice(7);
+    }
+    comprarJogo(jogo, dados, status);
+  });
   painel.appendChild(botao);
-  painel.appendChild(criar("p", "text-[13px] text-suave", "Entre na conta para adicionar jogos à sua biblioteca."));
+  painel.appendChild(status);
+}
+
+// pede a compra ao C++; se der certo, atualiza a conta e o painel
+async function comprarJogo(jogo, dados, status) {
+  const resposta = await api("/api/comprar", dados);
+  if (resposta.ok) {
+    atualizarSessao(resposta.conta);
+  } else {
+    mostrarStatus(status, false, ultimaMensagem(resposta, "Não foi possível comprar."));
+  }
 }
 
 // busca: espera a pessoa parar de digitar um pouco antes de pedir ao C++
@@ -260,7 +361,321 @@ document.querySelectorAll("#tela-catalogo button[data-ordem]").forEach(function 
 });
 
 
+// ===== Conta: entrar, criar conta e sair =====
+
+let contaAtual = null; // conta logada (nome, saldo, biblioteca, cartões), ou null
+let abaAcesso = "entrar";
+
+// mostra no cabeçalho e na tela Minha conta se há alguém logado
+function atualizarSessao(conta) {
+  contaAtual = conta;
+  const logado = conta !== null;
+
+  document.getElementById("cabecalho-entrar").hidden = logado;
+  document.getElementById("cabecalho-conectado").hidden = !logado;
+  document.getElementById("conta-area-acesso").hidden = logado;
+  document.getElementById("conta-painel").hidden = !logado;
+
+  if (logado) {
+    document.getElementById("cabecalho-nome").textContent = conta.nome;
+    desenharConta();
+  }
+
+  // o painel de detalhes do catálogo muda (botão de compra) conforme há alguém logado
+  desenharDetalhes();
+}
+
+// mostra uma mensagem numa caixa (âmbar para erro, azul para sucesso)
+function mostrarStatus(caixa, sucesso, texto) {
+  caixa.hidden = false;
+  caixa.textContent = texto;
+  caixa.className = sucesso
+    ? "px-3.5 py-3 rounded-md font-medium bg-[#13233B] text-[#A9CBFF] border border-[#23406A]"
+    : "px-3.5 py-3 rounded-md font-medium bg-[#2A2113] text-aviso border border-[#4A3818]";
+}
+
+// última mensagem que o C++ mandou (ou um texto padrão)
+function ultimaMensagem(resposta, padrao) {
+  const lista = resposta.mensagens || [];
+  return lista.length > 0 ? lista[lista.length - 1] : padrao;
+}
+
+// mensagem logo abaixo do formulário de acesso
+function mostrarStatusAcesso(sucesso, texto) {
+  mostrarStatus(document.getElementById("acesso-status"), sucesso, texto);
+}
+
+// troca entre as abas Entrar e Criar conta
+function escolherAba(aba) {
+  abaAcesso = aba;
+  const criando = aba === "criar";
+
+  document.getElementById("aba-entrar").setAttribute("aria-selected", criando ? "false" : "true");
+  document.getElementById("aba-criar").setAttribute("aria-selected", criando ? "true" : "false");
+  document.getElementById("acesso-titulo").textContent = criando ? "Criar conta" : "Entrar na conta";
+  document.getElementById("acesso-subtitulo").textContent = criando ? "Escolha um nome e uma senha." : "Use o nome e a senha da sua conta.";
+  document.getElementById("acesso-botao").textContent = criando ? "Criar conta" : "Entrar";
+  document.getElementById("acesso-confirma-campo").hidden = !criando;
+  document.getElementById("acesso-senha").autocomplete = criando ? "new-password" : "current-password";
+  document.getElementById("acesso-confirma").value = "";
+  document.getElementById("acesso-status").hidden = true;
+}
+
+document.getElementById("aba-entrar").addEventListener("click", function () { escolherAba("entrar"); });
+document.getElementById("aba-criar").addEventListener("click", function () { escolherAba("criar"); });
+
+// botão Entrar / Criar conta (também funciona apertando Enter)
+document.getElementById("acesso-form").addEventListener("submit", async function (evento) {
+  evento.preventDefault();
+
+  const nome = document.getElementById("acesso-nome").value.trim();
+  const senha = document.getElementById("acesso-senha").value;
+  const confirma = document.getElementById("acesso-confirma").value;
+
+  if (nome === "" || senha === "") {
+    mostrarStatusAcesso(false, "Preencha o nome e a senha.");
+    return;
+  }
+
+  if (abaAcesso === "entrar") {
+    const resposta = await api("/api/entrar", { nome: nome, senha: senha });
+    document.getElementById("acesso-senha").value = "";
+
+    if (resposta.ok) {
+      document.getElementById("acesso-status").hidden = true;
+      atualizarSessao(resposta.conta);
+    } else {
+      mostrarStatusAcesso(false, resposta.mensagens[resposta.mensagens.length - 1] || "Não foi possível entrar.");
+    }
+    return;
+  }
+
+  // criar conta: a confirmação da senha é conferida só aqui na tela
+  if (senha !== confirma) {
+    mostrarStatusAcesso(false, "As senhas não conferem.");
+    return;
+  }
+
+  const resposta = await api("/api/contas", { nome: nome, senha: senha });
+  const ultima = resposta.mensagens[resposta.mensagens.length - 1] || "";
+
+  if (resposta.ok) {
+    escolherAba("entrar");
+    document.getElementById("acesso-senha").value = "";
+    mostrarStatusAcesso(true, ultima);
+  } else {
+    mostrarStatusAcesso(false, ultima || "Não foi possível criar a conta.");
+  }
+});
+
+// sair da conta (pelo cabeçalho ou pelo cartão)
+async function sairDaConta() {
+  const resposta = await api("/api/sair", {});
+  if (resposta.ok) {
+    atualizarSessao(null);
+    document.getElementById("acesso-nome").value = "";
+    escolherAba("entrar");
+  }
+}
+
+document.getElementById("cabecalho-sair").addEventListener("click", sairDaConta);
+
+
+// ===== Minha conta: biblioteca =====
+
+let jogoSelecionadoConta = null;
+let confirmandoReembolso = false;
+
+function formatarData(segundos) {
+  return segundos > 0 ? new Date(segundos * 1000).toLocaleDateString("pt-BR") : "—";
+}
+
+// como o jogo foi pago: 0 = gratuito, 1 = saldo, 2 = cartão
+function formatarPagamento(item) {
+  if (item.forma === 2) {
+    return item.cartao_final ? "Cartão final " + item.cartao_final : "Cartão";
+  }
+  return item.forma === 1 ? "Saldo" : "Gratuito";
+}
+
+function etiquetaSituacao(instalado) {
+  const classes = instalado
+    ? "inline-block px-2.5 py-0.5 rounded-full text-[13px] font-medium bg-[#13233B] text-[#A9CBFF] border border-[#23406A]"
+    : "inline-block px-2.5 py-0.5 rounded-full text-[13px] font-medium bg-elevado text-[#B4BDC9] border border-[#2F3846]";
+  return criar("span", classes, instalado ? "Instalado" : "Não instalado");
+}
+
+function desenharConta() {
+  const conta = contaAtual;
+  const horas = conta.biblioteca.reduce(function (total, item) { return total + item.horas; }, 0);
+
+  document.getElementById("conta-saldo").textContent = formatoReais.format(conta.saldo);
+  document.getElementById("conta-total-jogos").textContent = String(conta.biblioteca.length);
+  document.getElementById("conta-total-horas").textContent = horas + " h";
+
+  const linhas = document.getElementById("biblioteca-linhas");
+  linhas.innerHTML = "";
+
+  for (const item of conta.biblioteca) {
+    const selecionado = item.id === jogoSelecionadoConta;
+    const linha = criar("tr", selecionado ? "bg-selecionado shadow-[inset_3px_0_0_#2F6FE0]" : "");
+
+    const celulaTitulo = criar("td", "px-2 border-b border-linha");
+    const botao = criar("button", "min-h-11 w-full px-2 text-left font-medium hover:text-link", item.titulo);
+    botao.type = "button";
+    botao.addEventListener("click", function () {
+      jogoSelecionadoConta = item.id;
+      confirmandoReembolso = false;
+      desenharConta();
+    });
+    celulaTitulo.appendChild(botao);
+    linha.appendChild(celulaTitulo);
+
+    const celulaSituacao = criar("td", "px-4 border-b border-linha");
+    celulaSituacao.appendChild(etiquetaSituacao(item.instalado));
+    linha.appendChild(celulaSituacao);
+
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", String(item.horas)));
+    linha.appendChild(criar("td", "px-4 border-b border-linha font-mono text-[#C9D1DB]", formatarData(item.data_compra)));
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-[#C9D1DB]", formatarPagamento(item)));
+    linhas.appendChild(linha);
+  }
+
+  document.getElementById("biblioteca-vazia").hidden = conta.biblioteca.length > 0;
+  desenharAcoesConta();
+}
+
+// painel da direita: instalar, jogar e reembolsar o jogo selecionado
+function desenharAcoesConta() {
+  const painel = document.getElementById("biblioteca-detalhes");
+  painel.innerHTML = "";
+
+  const item = contaAtual.biblioteca.find(function (i) { return i.id === jogoSelecionadoConta; });
+  if (!item) {
+    painel.appendChild(criar("p", "text-suave", "Selecione um jogo da biblioteca para ver as ações."));
+    return;
+  }
+
+  const status = criar("div");
+  status.setAttribute("role", "status");
+  status.hidden = true;
+
+  painel.appendChild(criar("div", "text-[13px] uppercase tracking-wider text-suave", "Jogo selecionado"));
+  painel.appendChild(criar("div", "text-[22px] font-semibold leading-tight", item.titulo));
+
+  const lista = criar("dl", "grid grid-cols-2 gap-x-4 gap-y-2.5");
+  const dados = [
+    ["Situação", item.instalado ? "Instalado" : "Não instalado"],
+    ["Horas jogadas", String(item.horas)],
+    ["Valor pago", item.valor_pago > 0 ? formatoReais.format(item.valor_pago) : "Grátis"]
+  ];
+  for (const dado of dados) {
+    lista.appendChild(criar("dt", "text-suave", dado[0]));
+    lista.appendChild(criar("dd", "text-right font-mono", dado[1]));
+  }
+  painel.appendChild(lista);
+
+  // instalar / desinstalar
+  const botaoInstalar = criar("button", "min-h-11 rounded-md border border-borda bg-elevado font-medium hover:border-suave",
+    item.instalado ? "Desinstalar" : "Instalar");
+  botaoInstalar.type = "button";
+  botaoInstalar.addEventListener("click", function () {
+    acaoConta(item.instalado ? "/api/desinstalar" : "/api/instalar", { id: item.id }, status);
+  });
+  painel.appendChild(botaoInstalar);
+
+  // jogar: registra horas
+  const blocoJogar = criar("div", "flex flex-col gap-2 border-t border-linha pt-3");
+  const rotulo = criar("label", "text-[#C9D1DB] font-medium", "Registrar horas jogadas");
+  rotulo.htmlFor = "campo-horas";
+  const linhaJogar = criar("div", "flex gap-2");
+  const campoHoras = criar("input", "flex-1 min-w-0 min-h-11 px-3 rounded-md bg-fundo border border-borda font-mono outline-none focus:border-destaque");
+  campoHoras.id = "campo-horas";
+  campoHoras.type = "number";
+  campoHoras.min = "1";
+  campoHoras.value = "1";
+  const botaoJogar = criar("button", "min-h-11 px-[18px] rounded-md bg-destaque text-white font-semibold hover:brightness-110", "Jogar");
+  botaoJogar.type = "button";
+  botaoJogar.addEventListener("click", function () {
+    acaoConta("/api/jogar", { id: item.id, horas: campoHoras.value }, status);
+  });
+  linhaJogar.appendChild(campoHoras);
+  linhaJogar.appendChild(botaoJogar);
+  blocoJogar.appendChild(rotulo);
+  blocoJogar.appendChild(linhaJogar);
+  painel.appendChild(blocoJogar);
+
+  // reembolso: só para jogos pagos; as regras são conferidas no C++
+  if (item.pago) {
+    const blocoReembolso = criar("div", "flex flex-col gap-2.5 border-t border-linha pt-3");
+    blocoReembolso.appendChild(criar("p", "text-[13px] text-suave",
+      "Reembolso até " + contaAtual.prazo_reembolso_dias + " dias após a compra e com menos de " +
+      contaAtual.limite_horas_reembolso + " horas jogadas."));
+
+    if (!confirmandoReembolso) {
+      const botao = criar("button", "min-h-11 rounded-md border border-[#4A3818] text-aviso font-medium hover:bg-[#2A2113]", "Reembolsar");
+      botao.type = "button";
+      botao.addEventListener("click", function () {
+        confirmandoReembolso = true;
+        desenharAcoesConta();
+      });
+      blocoReembolso.appendChild(botao);
+    } else {
+      const destino = item.forma === 2 && item.cartao_final
+        ? "voltam ao cartão final " + item.cartao_final
+        : "voltam ao seu saldo";
+      blocoReembolso.appendChild(criar("p", "text-aviso",
+        "Reembolsar " + item.titulo + "? " + formatoReais.format(item.valor_pago) + " " + destino + "."));
+
+      const botoes = criar("div", "grid grid-cols-2 gap-2");
+      const cancelar = criar("button", "min-h-11 rounded-md border border-borda hover:border-suave", "Cancelar");
+      cancelar.type = "button";
+      cancelar.addEventListener("click", function () {
+        confirmandoReembolso = false;
+        desenharAcoesConta();
+      });
+      const confirmar = criar("button", "min-h-11 rounded-md bg-[#8A5A12] text-white font-semibold hover:brightness-110", "Confirmar");
+      confirmar.type = "button";
+      confirmar.addEventListener("click", function () {
+        confirmandoReembolso = false;
+        acaoConta("/api/reembolsar", { id: item.id }, status);
+      });
+      botoes.appendChild(cancelar);
+      botoes.appendChild(confirmar);
+      blocoReembolso.appendChild(botoes);
+    }
+    painel.appendChild(blocoReembolso);
+  }
+
+  painel.appendChild(status);
+}
+
+// faz uma ação da conta no C++ e redesenha a tela com a conta atualizada
+async function acaoConta(caminho, dados, status) {
+  const resposta = await api(caminho, dados);
+
+  if (resposta.conta) {
+    contaAtual = resposta.conta;
+    desenharConta();
+    desenharDetalhes();
+  }
+
+  // o painel foi redesenhado: mostra o resultado na caixa nova
+  const caixa = document.querySelector("#biblioteca-detalhes > div[role=status]") || status;
+  if (caixa && document.getElementById("biblioteca-detalhes").contains(caixa)) {
+    mostrarStatus(caixa, resposta.ok, ultimaMensagem(resposta, resposta.ok ? "Feito." : "Não foi possível."));
+  }
+}
+
+
 // ===== Início =====
 
 api("/api/status");
 carregarCatalogo();
+
+// se alguém já estava logado (ex.: a página foi recarregada), continua logado
+api("/api/sessao").then(function (resposta) {
+  if (resposta.ok) {
+    atualizarSessao(resposta.conta);
+  }
+});
