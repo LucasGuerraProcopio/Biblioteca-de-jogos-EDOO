@@ -50,6 +50,24 @@ class cartao_de_credito
             return true;
         };
 
+        // devolve o valor ao cartão (usado no reembolso de uma compra feita com ele)
+        void estornar(double valor_estorno)
+        {
+            if(valor_estorno <= 0)
+            {
+                return;
+            };
+
+            gastos_credito -= valor_estorno;
+
+            if(gastos_credito < 0)
+            {
+                gastos_credito = 0;
+            };
+
+            cout << "Estorno de " << valor_estorno << " reais no cartão. Gastos totais: " << gastos_credito << endl;
+        };
+
         string GetNumero() const
         {
             return numero_credito;
@@ -85,7 +103,7 @@ class pix
         double taxa_da_biblioteca;
 
     public:
-        pix(string chave = "biblioteca-jogos@exemplo.com", double taxa = 0.02)
+        pix(string chave = "gcromeiro@gmail.com", double taxa = 0.02)
         {
             this->chave_pix = chave;
             this->taxa_da_biblioteca = taxa;

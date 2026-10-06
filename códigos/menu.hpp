@@ -41,11 +41,24 @@ inline void cadastrar_jogo(catalogo& loja)
         tipo = ler_inteiro("Digite 1 para gratuito ou 2 para pago: ");
     };
 
+    // usuário e senha usados para entrar no jogo
+    string usuario_jogo = ler_texto("Usuário do jogo: ");
+    if(usuario_jogo.size() == 0)
+    {
+        return;
+    };
+
+    string senha_jogo = ler_texto("Senha do jogo: ");
+    if(senha_jogo.size() == 0)
+    {
+        return;
+    };
+
     int id_novo = -1;
 
     if(tipo == 1)
     {
-        id_novo = loja.adicionar(new jogos_gratuitos(titulo, tamanho, ""));
+        id_novo = loja.adicionar(new jogos_gratuitos(titulo, tamanho, senha_jogo, usuario_jogo));
     }
     else
     {
@@ -54,7 +67,7 @@ inline void cadastrar_jogo(catalogo& loja)
         {
             return;
         };
-        id_novo = loja.adicionar(new jogos_pagos(titulo, tamanho, "", preco));
+        id_novo = loja.adicionar(new jogos_pagos(titulo, tamanho, senha_jogo, preco, usuario_jogo));
     };
 
     if(id_novo != -1)
@@ -63,7 +76,7 @@ inline void cadastrar_jogo(catalogo& loja)
     };
 }
 
-// altera título, tamanho ou preço de um jogo
+// altera título, tamanho, preço, usuário ou senha de um jogo
 inline void atualizar_jogo(catalogo& loja)
 {
     cout << "\n--- Atualizar jogo ---" << endl;
@@ -79,14 +92,14 @@ inline void atualizar_jogo(catalogo& loja)
 
     jogo->mostrar_informacoes();
 
-    int opcao = ler_inteiro("O que alterar (1 - título, 2 - tamanho, 3 - preço): ");
-    while(opcao < 1 || opcao > 3)
+    int opcao = ler_inteiro("O que alterar (1 - título, 2 - tamanho, 3 - preço, 4 - usuário, 5 - senha): ");
+    while(opcao < 1 || opcao > 5)
     {
         if(cin.eof())
         {
             return;
         };
-        opcao = ler_inteiro("Digite 1, 2 ou 3: ");
+        opcao = ler_inteiro("Digite um número de 1 a 5: ");
     };
 
     if(opcao == 1)
@@ -112,6 +125,24 @@ inline void atualizar_jogo(catalogo& loja)
             return;
         };
         jogo->SetTamanho(novo_tamanho);
+    }
+    else if(opcao == 4)
+    {
+        string novo_usuario = ler_texto("Novo usuário do jogo: ");
+        if(novo_usuario.size() == 0)
+        {
+            return;
+        };
+        jogo->SetConta(novo_usuario);
+    }
+    else if(opcao == 5)
+    {
+        string nova_senha = ler_texto("Nova senha do jogo: ");
+        if(nova_senha.size() == 0)
+        {
+            return;
+        };
+        jogo->SetSenha(nova_senha);
     }
     else
     {
@@ -373,6 +404,8 @@ inline void conta_cadastrar_cartao(usuario& conta)
 {
     cout << "\n--- Cadastrar cartão ---" << endl;
  
+    cout << "Por segurança, só os 4 últimos dígitos ficam salvos no banco e o CVC não é guardado." << endl;
+
     string numero = ler_texto("Número do cartão: ");
     if(numero.size() == 0)
     {
@@ -479,7 +512,16 @@ inline void conta_desinstalar(usuario& conta)
 }
  
  
-// devolve um jogo pago e o dinheiro volta para o saldo
+// registra horas jogadas em um jogo instalado
+inline void conta_jogar(usuario& conta)
+{
+    int id_jogo = ler_inteiro("Id do jogo para jogar: ");
+    int horas = ler_inteiro("Quantas horas jogou: ");
+    conta.jogar(id_jogo, horas);
+}
+ 
+ 
+// devolve um jogo pago e o dinheiro volta para o saldo ou para o cartão usado na compra
 inline void conta_reembolsar(usuario& conta, catalogo& loja)
 {
     int id_jogo = ler_inteiro("Id do jogo para reembolsar: ");
@@ -529,6 +571,7 @@ inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& 
         cout << "6 - Desinstalar jogo" << endl;
         cout << "7 - Reembolsar jogo" << endl;
         cout << "8 - Resgatar gift card" << endl;
+        cout << "9 - Jogar" << endl;
         cout << "0 - Sair da conta" << endl;
  
         opcao = ler_inteiro("Escolha: ");
@@ -559,6 +602,9 @@ inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& 
             case 8:
                 conta_resgatar_gift_card(*conta, usuarios);
                 break;
+            case 9:
+                conta_jogar(*conta);
+                break;
             case 0:
                 cout << "Saindo da conta..." << endl;
                 break;
@@ -566,8 +612,8 @@ inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& 
                 cout << "Opção inválida." << endl;
         };
  
-        // as opções 2 a 7 podem mudar a conta, então ela é salva no banco
-        if(opcao >= 2 && opcao <= 7)
+        // as opções 2 a 9 podem mudar a conta, então ela é salva no banco
+        if(opcao >= 2 && opcao <= 9)
         {
             usuarios.salvar(conta);
         };

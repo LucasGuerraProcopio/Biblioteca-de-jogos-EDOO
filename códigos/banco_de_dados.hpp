@@ -30,7 +30,6 @@ class banco_de_dados
             char* erro = nullptr;
             if(sqlite3_exec(conexao, comando.c_str(), nullptr, nullptr, &erro) != SQLITE_OK)
             {
-                // erro pode ser nullptr (ex: conexão fechada), e imprimir nullptr trava o cout
                 cout << "Erro no banco de dados: " << (erro != nullptr ? erro : "erro desconhecido") << endl;
                 sqlite3_free(erro);
                 return false;
@@ -38,7 +37,7 @@ class banco_de_dados
             return true;
         };
 
-        // verifica se a tabela já tem a coluna (usado para atualizar bancos antigos)
+        // verifica se a tabela já tem a coluna
         bool coluna_existe(const string& tabela, const string& coluna)
         {
             bool existe = false;
@@ -103,7 +102,7 @@ class banco_de_dados
                 executar("UPDATE jogos SET tipo = 'pago' WHERE preco > 0");
             };
 
-            // valores de controle (maior id de jogo já usado, jogos iniciais já cadastrados)
+            // valores de controle
             executar("CREATE TABLE IF NOT EXISTS controle (nome TEXT PRIMARY KEY, valor INTEGER NOT NULL)");
 
             executar("CREATE TABLE IF NOT EXISTS usuarios ("
@@ -118,7 +117,18 @@ class banco_de_dados
                      "instalado INTEGER NOT NULL DEFAULT 0, "
                      "horas_jogadas INTEGER NOT NULL DEFAULT 0, "
                      "data_compra INTEGER NOT NULL DEFAULT 0, "
+                     "forma_pagamento INTEGER NOT NULL DEFAULT 0, "
+                     "valor_pago REAL NOT NULL DEFAULT 0, "
+                     "cartao_pago INTEGER NOT NULL DEFAULT -1, "
                      "PRIMARY KEY (id_usuario, id_jogo))");
+
+            // banco criado antes das colunas de pagamento: adiciona as colunas que faltam
+            if(coluna_existe("biblioteca", "forma_pagamento") == false)
+            {
+                executar("ALTER TABLE biblioteca ADD COLUMN forma_pagamento INTEGER NOT NULL DEFAULT 0");
+                executar("ALTER TABLE biblioteca ADD COLUMN valor_pago REAL NOT NULL DEFAULT 0");
+                executar("ALTER TABLE biblioteca ADD COLUMN cartao_pago INTEGER NOT NULL DEFAULT -1");
+            };
 
             executar("CREATE TABLE IF NOT EXISTS cartoes ("
                      "id_usuario INTEGER NOT NULL, "
@@ -150,6 +160,24 @@ class banco_de_dados
         };
 
 
+        // TRANSAÇÃO
+        // agrupa várias gravações: ou todas são salvas (confirmar) ou nenhuma (cancelar)
+        bool iniciar_transacao()
+        {
+            return executar("BEGIN");
+        };
+
+        bool confirmar_transacao()
+        {
+            return executar("COMMIT");
+        };
+
+        void cancelar_transacao()
+        {
+            executar("ROLLBACK");
+        };
+
+
         // CONTROLE
         // lê um valor guardado na tabela controle, devolve 0 se ainda não existe
         int ler_controle(const string& nome)
@@ -174,7 +202,7 @@ class banco_de_dados
             return valor;
         };
 
-        // guarda um valor na tabela controle, se o nome já existe troca o valor
+        // guarda um valor na tabela controle
         bool salvar_controle(const string& nome, int valor)
         {
             sqlite3_stmt* comando = nullptr;
@@ -362,7 +390,7 @@ class banco_de_dados
             };
 
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "INSERT INTO biblioteca (id_usuario, id_jogo, instalado, horas_jogadas, data_compra) VALUES (?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "INSERT INTO biblioteca (id_usuario, id_jogo, instalado, horas_jogadas, data_compra, forma_pagamento, valor_pago, cartao_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return false;
@@ -377,6 +405,9 @@ class banco_de_dados
                 sqlite3_bind_int(comando, 3, itens[i].instalado ? 1 : 0);
                 sqlite3_bind_int(comando, 4, itens[i].horas_jogadas);
                 sqlite3_bind_int64(comando, 5, itens[i].data_compra);
+                sqlite3_bind_int(comando, 6, itens[i].forma_pagamento);
+                sqlite3_bind_double(comando, 7, itens[i].valor_pago);
+                sqlite3_bind_int(comando, 8, itens[i].cartao_pago);
 
                 if(sqlite3_step(comando) != SQLITE_DONE)
                 {
@@ -417,8 +448,14 @@ class banco_de_dados
             for(size_t i = 0; i < cartoes.size(); i++)
             {
                 sqlite3_bind_int(comando, 1, id_usuario);
-                sqlite3_bind_text(comando, 2, cartoes[i].GetNumero().c_str(), -1, SQLITE_TRANSIENT);
-                sqlite3_bind_int(comando, 3, cartoes[i].GetCvc());
+                string numero = cartoes[i].GetNumero();
+                if(numero.size() > 4)
+                {
+                    numero = numero.substr(numero.size() - 4);
+                };
+
+                sqlite3_bind_text(comando, 2, numero.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_int(comando, 3, 0);
                 sqlite3_bind_text(comando, 4, cartoes[i].GetValidade().c_str(), -1, SQLITE_TRANSIENT);
                 sqlite3_bind_double(comando, 5, cartoes[i].GetLimite());
                 sqlite3_bind_double(comando, 6, cartoes[i].GetGastos());
@@ -474,7 +511,7 @@ class banco_de_dados
             vector <item_biblioteca> itens;
 
             sqlite3_stmt* comando = nullptr;
-            if(sqlite3_prepare_v2(conexao, "SELECT id_jogo, instalado, horas_jogadas, data_compra FROM biblioteca WHERE id_usuario = ? ORDER BY rowid", -1, &comando, nullptr) != SQLITE_OK)
+            if(sqlite3_prepare_v2(conexao, "SELECT id_jogo, instalado, horas_jogadas, data_compra, forma_pagamento, valor_pago, cartao_pago FROM biblioteca WHERE id_usuario = ? ORDER BY rowid", -1, &comando, nullptr) != SQLITE_OK)
             {
                 cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
                 return itens;
@@ -489,6 +526,9 @@ class banco_de_dados
                 item.instalado = (sqlite3_column_int(comando, 1) != 0);
                 item.horas_jogadas = sqlite3_column_int(comando, 2);
                 item.data_compra = sqlite3_column_int64(comando, 3);
+                item.forma_pagamento = sqlite3_column_int(comando, 4);
+                item.valor_pago = sqlite3_column_double(comando, 5);
+                item.cartao_pago = sqlite3_column_int(comando, 6);
                 itens.push_back(item);
             };
 
@@ -526,7 +566,30 @@ class banco_de_dados
             return cartoes;
         };
 
-        // cria o gift card no banco ou atualiza se ele já existir (INSERT OR REPLACE)
+        // cria um gift card novo
+        bool inserir_gift_card(const gift_card& card)
+        {
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "INSERT INTO gift_cards (codigo, valor, valido) VALUES (?, ?, 1)", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_text(comando, 1, card.GetCodigo().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_double(comando, 2, card.GetValor());
+
+            bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
+            sqlite3_finalize(comando);
+
+            if(sucesso == false)
+            {
+                cout << "Não foi possível criar o gift card " << card.GetCodigo() << "." << endl;
+            };
+            return sucesso;
+        };
+
+        // atualiza o gift card no banco
         bool salvar_gift_card(const gift_card& card)
         {
             sqlite3_stmt* comando = nullptr;
