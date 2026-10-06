@@ -385,6 +385,9 @@ class repositorio_usuarios
             };
         };
 
+        // não deixa copiar o repositório, senão as mesmas contas seriam apagadas duas vezes
+        repositorio_usuarios(const repositorio_usuarios&) = delete;
+        repositorio_usuarios& operator=(const repositorio_usuarios&) = delete;
 
         // salva a conta, a biblioteca e os cartões no banco
         void salvar(usuario* conta)

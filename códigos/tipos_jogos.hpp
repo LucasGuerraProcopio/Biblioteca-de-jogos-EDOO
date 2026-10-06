@@ -185,15 +185,14 @@ class jogos_pagos : public jogos_gratuitos
         };
 
         // destrutor
-        ~jogos_pagos() {};
-
+        ~jogos_pagos() override {};
 
         //jogo pago troca o resultado das funções virtuais
-        double GetPreco() const
+        double GetPreco() const override
         {
             return valor_jogo;
         };
-        bool EhPago() const
+        bool EhPago() const override
         {
             return true;
         };

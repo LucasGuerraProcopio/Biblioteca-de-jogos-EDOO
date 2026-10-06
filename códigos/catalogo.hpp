@@ -44,6 +44,9 @@ class catalogo
             };
         };
 
+        // não deixa copiar o catálogo, senão os mesmos jogos seriam apagados duas vezes
+        catalogo(const catalogo&) = delete;
+        catalogo& operator=(const catalogo&) = delete;
 
         // Cadastra o jogo e devolve o id
         int adicionar(jogos_gratuitos* novo_jogo)
