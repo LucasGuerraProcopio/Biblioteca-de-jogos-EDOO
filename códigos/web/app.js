@@ -82,6 +82,11 @@ function abrirTela() {
       link.removeAttribute("aria-current");
     }
   });
+
+  // a administração sempre mostra os dados mais recentes ao ser aberta
+  if (atual === "admin" && typeof carregarAdmin === "function") {
+    carregarAdmin();
+  }
 }
 
 window.addEventListener("hashchange", abrirTela);
@@ -794,6 +799,330 @@ document.getElementById("form-cartao").addEventListener("submit", function (even
     return;
   }
   enviarCarteira(this, "/api/cartoes", dados);
+});
+
+
+// ===== Administração =====
+
+const estadoAdmin = { jogos: [], jogoEditado: null, tipoNovo: "gratuito", confirmandoRemocao: false, contaSelecionada: null, contas: [] };
+
+// abas Jogos / Gift cards / Contas
+document.querySelectorAll("button[data-aba-admin]").forEach(function (aba) {
+  aba.addEventListener("click", function () {
+    document.querySelectorAll("button[data-aba-admin]").forEach(function (outra) {
+      outra.setAttribute("aria-selected", outra === aba ? "true" : "false");
+    });
+    document.getElementById("admin-jogos").hidden = aba.dataset.abaAdmin !== "jogos";
+    document.getElementById("admin-gift").hidden = aba.dataset.abaAdmin !== "gift";
+    document.getElementById("admin-contas").hidden = aba.dataset.abaAdmin !== "contas";
+  });
+});
+
+function carregarAdmin() {
+  carregarJogosAdmin();
+  carregarGiftCards();
+  carregarContasAdmin();
+}
+
+// --- Jogos ---
+
+async function carregarJogosAdmin() {
+  const resposta = await api("/api/jogos");
+  if (!resposta.ok) {
+    return;
+  }
+  estadoAdmin.jogos = resposta.jogos;
+
+  const linhas = document.getElementById("admin-jogos-linhas");
+  linhas.innerHTML = "";
+
+  for (const jogo of resposta.jogos) {
+    const editado = jogo.id === estadoAdmin.jogoEditado;
+    const linha = criar("tr", editado ? "bg-selecionado shadow-[inset_3px_0_0_#2F6FE0]" : "");
+    linha.appendChild(criar("td", "px-4 h-12 border-b border-linha font-mono text-suave", String(jogo.id)));
+
+    const celula = criar("td", "px-2 border-b border-linha");
+    const botao = criar("button", "min-h-11 w-full px-2 text-left font-medium hover:text-link", jogo.titulo);
+    botao.type = "button";
+    botao.addEventListener("click", function () { editarJogo(jogo); });
+    celula.appendChild(botao);
+    linha.appendChild(celula);
+
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", formatarTamanho(jogo.tamanho)));
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", formatarPreco(jogo)));
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-[#C9D1DB]", jogo.em_uso ? "Sim" : "Não"));
+    linhas.appendChild(linha);
+  }
+}
+
+// escolhe o tipo do jogo novo (o preço só vale para jogo pago)
+function escolherTipoJogo(tipo) {
+  estadoAdmin.tipoNovo = tipo;
+  document.querySelectorAll("button[data-tipo-jogo]").forEach(function (botao) {
+    botao.setAttribute("aria-pressed", botao.dataset.tipoJogo === tipo ? "true" : "false");
+  });
+  const preco = document.getElementById("jogo-preco");
+  preco.disabled = tipo !== "pago";
+  if (tipo !== "pago") {
+    preco.value = "";
+  }
+  document.getElementById("jogo-preco-obrigatorio").hidden = tipo !== "pago";
+}
+
+document.querySelectorAll("button[data-tipo-jogo]").forEach(function (botao) {
+  botao.addEventListener("click", function () { escolherTipoJogo(botao.dataset.tipoJogo); });
+});
+
+// deixa o formulário no modo "novo jogo"
+function novoJogo() {
+  estadoAdmin.jogoEditado = null;
+  estadoAdmin.confirmandoRemocao = false;
+  const formulario = document.getElementById("form-jogo");
+  formulario.reset();
+  document.getElementById("form-jogo-titulo").textContent = "Novo jogo";
+  document.getElementById("form-jogo-salvar").textContent = "Cadastrar jogo";
+  document.getElementById("form-jogo-novo").hidden = true;
+  document.getElementById("jogo-senha-obrigatoria").hidden = false;
+  document.getElementById("jogo-senha-dica").hidden = true;
+  document.getElementById("jogo-tipo-dica").hidden = true;
+  document.querySelectorAll("button[data-tipo-jogo]").forEach(function (b) { b.disabled = false; });
+  escolherTipoJogo("gratuito");
+  desenharRemocaoJogo();
+  carregarJogosAdmin();
+}
+
+// preenche o formulário com o jogo clicado
+function editarJogo(jogo) {
+  estadoAdmin.jogoEditado = jogo.id;
+  estadoAdmin.confirmandoRemocao = false;
+
+  document.getElementById("form-jogo-titulo").textContent = "Editar jogo";
+  document.getElementById("form-jogo-salvar").textContent = "Salvar alterações";
+  document.getElementById("form-jogo-novo").hidden = false;
+  document.getElementById("jogo-titulo").value = jogo.titulo;
+  document.getElementById("jogo-usuario").value = jogo.usuario;
+  document.getElementById("jogo-senha").value = "";
+  document.getElementById("jogo-senha-obrigatoria").hidden = true;
+  document.getElementById("jogo-senha-dica").hidden = false;
+  document.getElementById("jogo-tamanho").value = String(jogo.tamanho).replace(".", ",");
+
+  // o tipo fica travado: no C++ um jogo gratuito não vira pago
+  escolherTipoJogo(jogo.pago ? "pago" : "gratuito");
+  document.querySelectorAll("button[data-tipo-jogo]").forEach(function (b) { b.disabled = true; });
+  document.getElementById("jogo-tipo-dica").hidden = false;
+  if (jogo.pago) {
+    document.getElementById("jogo-preco").value = String(jogo.preco).replace(".", ",");
+  }
+
+  document.querySelector("#form-jogo div[role=status]").hidden = true;
+  desenharRemocaoJogo();
+  carregarJogosAdmin();
+}
+
+document.getElementById("form-jogo-novo").addEventListener("click", novoJogo);
+
+// botão Remover (só aparece editando), com confirmação
+function desenharRemocaoJogo() {
+  const area = document.getElementById("form-jogo-remocao");
+  area.innerHTML = "";
+  area.hidden = estadoAdmin.jogoEditado === null;
+  if (area.hidden) {
+    return;
+  }
+
+  if (!estadoAdmin.confirmandoRemocao) {
+    const botao = criar("button", "min-h-11 rounded-md border border-[#4A3818] text-aviso font-medium hover:bg-[#2A2113]", "Remover jogo");
+    botao.type = "button";
+    botao.addEventListener("click", function () {
+      estadoAdmin.confirmandoRemocao = true;
+      desenharRemocaoJogo();
+    });
+    area.appendChild(botao);
+    return;
+  }
+
+  area.appendChild(criar("p", "text-aviso", "Remover " + document.getElementById("jogo-titulo").value + " da loja?"));
+  const botoes = criar("div", "grid grid-cols-2 gap-2");
+  const cancelar = criar("button", "min-h-11 rounded-md border border-borda hover:border-suave", "Cancelar");
+  cancelar.type = "button";
+  cancelar.addEventListener("click", function () {
+    estadoAdmin.confirmandoRemocao = false;
+    desenharRemocaoJogo();
+  });
+  const confirmar = criar("button", "min-h-11 rounded-md bg-[#8A5A12] text-white font-semibold hover:brightness-110", "Remover");
+  confirmar.type = "button";
+  confirmar.addEventListener("click", async function () {
+    const status = document.querySelector("#form-jogo div[role=status]");
+    const resposta = await api("/api/admin/jogos/remover", { id: estadoAdmin.jogoEditado });
+    const texto = ultimaMensagem(resposta, resposta.ok ? "Jogo removido." : "Não foi possível remover.");
+    if (resposta.ok) {
+      novoJogo();
+      carregarCatalogo();
+    } else {
+      estadoAdmin.confirmandoRemocao = false;
+      desenharRemocaoJogo();
+    }
+    mostrarStatus(status, resposta.ok, texto);
+  });
+  botoes.appendChild(cancelar);
+  botoes.appendChild(confirmar);
+  area.appendChild(botoes);
+}
+
+// cadastrar ou salvar alterações
+document.getElementById("form-jogo").addEventListener("submit", async function (evento) {
+  evento.preventDefault();
+  const status = this.querySelector("div[role=status]");
+  const editando = estadoAdmin.jogoEditado !== null;
+
+  const dados = {
+    titulo: document.getElementById("jogo-titulo").value.trim(),
+    usuario: document.getElementById("jogo-usuario").value.trim(),
+    senha: document.getElementById("jogo-senha").value,
+    tamanho: document.getElementById("jogo-tamanho").value.trim(),
+    preco: document.getElementById("jogo-preco").value.trim(),
+    tipo: estadoAdmin.tipoNovo
+  };
+
+  if (dados.titulo === "" || dados.usuario === "" || dados.tamanho === "" ||
+      (!editando && dados.senha === "") || (estadoAdmin.tipoNovo === "pago" && dados.preco === "")) {
+    mostrarStatus(status, false, "Preencha todos os campos obrigatórios.");
+    return;
+  }
+
+  let resposta;
+  if (editando) {
+    dados.id = estadoAdmin.jogoEditado;
+    resposta = await api("/api/admin/jogos/editar", dados);
+  } else {
+    resposta = await api("/api/admin/jogos", dados);
+  }
+
+  const texto = ultimaMensagem(resposta, resposta.ok ? "Feito." : "Não foi possível salvar.");
+  if (resposta.ok) {
+    if (!editando) {
+      novoJogo();
+    } else {
+      carregarJogosAdmin();
+      document.getElementById("jogo-senha").value = "";
+    }
+    carregarCatalogo();
+  }
+  mostrarStatus(status, resposta.ok, texto);
+});
+
+// --- Gift cards ---
+
+async function carregarGiftCards() {
+  const resposta = await api("/api/admin/giftcards");
+  if (!resposta.ok) {
+    return;
+  }
+
+  const linhas = document.getElementById("admin-gift-linhas");
+  linhas.innerHTML = "";
+  for (const card of resposta.giftcards) {
+    const linha = criar("tr");
+    linha.appendChild(criar("td", "px-4 h-12 border-b border-linha font-mono", card.codigo));
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", formatoReais.format(card.valor)));
+    const celula = criar("td", "px-4 border-b border-linha");
+    celula.appendChild(criar("span", card.valido
+      ? "inline-block px-2.5 py-0.5 rounded-full text-[13px] font-medium bg-[#13233B] text-[#A9CBFF] border border-[#23406A]"
+      : "inline-block px-2.5 py-0.5 rounded-full text-[13px] font-medium bg-elevado text-[#B4BDC9] border border-[#2F3846]",
+      card.valido ? "Disponível" : "Usado"));
+    linha.appendChild(celula);
+    linhas.appendChild(linha);
+  }
+  document.getElementById("admin-gift-vazio").hidden = resposta.giftcards.length > 0;
+}
+
+document.getElementById("form-admin-gift").addEventListener("submit", async function (evento) {
+  evento.preventDefault();
+  const status = this.querySelector("div[role=status]");
+  const codigo = document.getElementById("admin-gift-codigo").value.trim();
+  const valor = document.getElementById("admin-gift-valor").value.trim();
+
+  if (codigo === "" || valor === "") {
+    mostrarStatus(status, false, "Preencha o código e o valor.");
+    return;
+  }
+
+  const resposta = await api("/api/admin/giftcards", { codigo: codigo, valor: valor });
+  if (resposta.ok) {
+    this.reset();
+    carregarGiftCards();
+  }
+  mostrarStatus(status, resposta.ok, ultimaMensagem(resposta, resposta.ok ? "Gift card criado." : "Não foi possível criar."));
+});
+
+// --- Contas ---
+
+async function carregarContasAdmin() {
+  const resposta = await api("/api/admin/contas");
+  if (!resposta.ok) {
+    return;
+  }
+  estadoAdmin.contas = resposta.contas;
+
+  // se a conta selecionada não existe mais, limpa a seleção
+  if (!resposta.contas.some(function (c) { return c.id === estadoAdmin.contaSelecionada; })) {
+    estadoAdmin.contaSelecionada = null;
+  }
+
+  const linhas = document.getElementById("admin-contas-linhas");
+  linhas.innerHTML = "";
+  for (const conta of resposta.contas) {
+    const selecionada = conta.id === estadoAdmin.contaSelecionada;
+    const linha = criar("tr", selecionada ? "bg-selecionado shadow-[inset_3px_0_0_#2F6FE0]" : "");
+    linha.appendChild(criar("td", "px-4 h-12 border-b border-linha font-mono text-suave", String(conta.id)));
+
+    const celula = criar("td", "px-2 border-b border-linha");
+    const botao = criar("button", "min-h-11 w-full px-2 text-left font-medium hover:text-link", conta.nome);
+    botao.type = "button";
+    botao.addEventListener("click", function () {
+      estadoAdmin.contaSelecionada = conta.id;
+      document.querySelector("#form-remover-conta div[role=status]").hidden = true;
+      carregarContasAdmin();
+    });
+    celula.appendChild(botao);
+    linha.appendChild(celula);
+
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", formatoReais.format(conta.saldo)));
+    linha.appendChild(criar("td", "px-4 border-b border-linha text-right font-mono", String(conta.jogos)));
+    linhas.appendChild(linha);
+  }
+  document.getElementById("admin-contas-vazio").hidden = resposta.contas.length > 0;
+
+  const escolhida = resposta.contas.find(function (c) { return c.id === estadoAdmin.contaSelecionada; });
+  document.getElementById("remover-conta-vazio").hidden = !!escolhida;
+  document.getElementById("remover-conta-campos").hidden = !escolhida;
+  if (escolhida) {
+    document.getElementById("remover-conta-nome").textContent = escolhida.nome;
+  }
+}
+
+document.getElementById("form-remover-conta").addEventListener("submit", async function (evento) {
+  evento.preventDefault();
+  const status = this.querySelector("div[role=status]");
+  const senha = document.getElementById("remover-conta-senha").value;
+
+  if (senha === "") {
+    mostrarStatus(status, false, "Digite a senha da conta.");
+    return;
+  }
+
+  const resposta = await api("/api/admin/contas/remover", { id: estadoAdmin.contaSelecionada, senha: senha });
+  document.getElementById("remover-conta-senha").value = "";
+
+  if (resposta.ok) {
+    // se a conta removida era a logada, a tela volta para o modo deslogado
+    if (contaAtual !== null && resposta.conta === null) {
+      atualizarSessao(null);
+    }
+    carregarContasAdmin();
+    carregarJogosAdmin();
+  }
+  mostrarStatus(status, resposta.ok, ultimaMensagem(resposta, resposta.ok ? "Conta removida." : "Não foi possível remover."));
 });
 
 

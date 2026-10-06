@@ -767,6 +767,12 @@ class repositorio_usuarios
             };
         };
 
+        // contas cadastradas, só para leitura (usada pela tela de administração)
+        const vector <usuario*>& GetContas() const
+        {
+            return contas;
+        };
+
         // Lista as contas
         void listar() const
         {

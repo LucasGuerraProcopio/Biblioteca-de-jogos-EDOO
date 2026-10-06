@@ -638,6 +638,34 @@ class banco_de_dados
             return achou;
         };
 
+        // lista todos os gift cards (usada pela tela de administração)
+        vector <gift_card> listar_gift_cards()
+        {
+            vector <gift_card> lista;
+            sqlite3_stmt* comando = nullptr;
+
+            if(sqlite3_prepare_v2(conexao, "SELECT codigo, valor, valido FROM gift_cards ORDER BY codigo", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return lista;
+            };
+
+            while(sqlite3_step(comando) == SQLITE_ROW)
+            {
+                gift_card card(ler_coluna_texto(comando, 0), sqlite3_column_double(comando, 1));
+
+                if(sqlite3_column_int(comando, 2) == 0)
+                {
+                    card.GiftCardRegistrado();
+                };
+                lista.push_back(card);
+            };
+
+            sqlite3_finalize(comando);
+            return lista;
+        };
+
+
         // apaga a conta, a biblioteca e os cartões dela
         bool remover_conta(int id_conta)
         {

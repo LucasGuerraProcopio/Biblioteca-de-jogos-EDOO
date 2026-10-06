@@ -282,7 +282,136 @@
 
       <section id="tela-admin" data-tela="admin" class="flex-1 flex flex-col gap-4" hidden>
         <h1 class="text-[26px] font-semibold">Administração</h1>
-        <p class="text-suave">A administração entra aqui no passo 7.</p>
+
+        <div role="tablist" aria-label="Áreas da administração" class="flex gap-1 border-b border-borda">
+          <button type="button" role="tab" data-aba-admin="jogos" aria-selected="true" class="min-h-11 px-4 -mb-px border-b-2 border-transparent text-suave aria-selected:border-destaque aria-selected:text-texto aria-selected:font-semibold">Jogos</button>
+          <button type="button" role="tab" data-aba-admin="gift" aria-selected="false" class="min-h-11 px-4 -mb-px border-b-2 border-transparent text-suave aria-selected:border-destaque aria-selected:text-texto aria-selected:font-semibold">Gift cards</button>
+          <button type="button" role="tab" data-aba-admin="contas" aria-selected="false" class="min-h-11 px-4 -mb-px border-b-2 border-transparent text-suave aria-selected:border-destaque aria-selected:text-texto aria-selected:font-semibold">Contas</button>
+        </div>
+
+        <!-- jogos: lista + formulário de cadastro/edição -->
+        <div id="admin-jogos" class="flex flex-wrap gap-4">
+          <div class="flex-[999_1_440px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="text-left text-[13px] uppercase tracking-wider text-suave">
+                  <th class="px-4 py-3 font-medium border-b border-borda w-14">Id</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda">Título</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda text-right">Tamanho</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda text-right">Preço</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda">Em bibliotecas</th>
+                </tr>
+              </thead>
+              <tbody id="admin-jogos-linhas"></tbody>
+            </table>
+          </div>
+
+          <form id="form-jogo" class="flex-[1_1_300px] max-w-[380px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5" novalidate>
+            <div class="flex items-center justify-between gap-2.5">
+              <h2 id="form-jogo-titulo" class="text-lg font-semibold">Novo jogo</h2>
+              <button type="button" id="form-jogo-novo" class="min-h-9 px-3 rounded-md border border-borda hover:border-suave" hidden>+ Novo jogo</button>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label for="jogo-titulo" class="text-[#C9D1DB] font-medium">Título<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+              <input id="jogo-titulo" type="text" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label for="jogo-usuario" class="text-[#C9D1DB] font-medium">Usuário do jogo<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="jogo-usuario" type="text" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label for="jogo-senha" class="text-[#C9D1DB] font-medium">Senha do jogo<span id="jogo-senha-obrigatoria" aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="jogo-senha" type="password" autocomplete="new-password" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+            </div>
+            <p id="jogo-senha-dica" class="text-[13px] text-suave -mt-1.5" hidden>Deixe a senha em branco para manter a atual.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label for="jogo-tamanho" class="text-[#C9D1DB] font-medium">Tamanho (GB)<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="jogo-tamanho" type="text" inputmode="decimal" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label for="jogo-preco" class="text-[#C9D1DB] font-medium">Preço (R$)<span id="jogo-preco-obrigatorio" aria-hidden="true" class="text-[#FF6B6B] ml-1" hidden>*</span></label>
+                <input id="jogo-preco" type="text" inputmode="decimal" disabled class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono disabled:text-[#6E7886] disabled:cursor-not-allowed">
+              </div>
+            </div>
+            <fieldset class="flex flex-col gap-1.5">
+              <legend class="text-[#C9D1DB] font-medium mb-1.5">Tipo<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></legend>
+              <div class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-fundo border border-borda">
+                <button type="button" data-tipo-jogo="gratuito" aria-pressed="true" class="min-h-9 rounded-md font-medium text-suave aria-pressed:bg-elevado aria-pressed:text-texto disabled:cursor-not-allowed">Gratuito</button>
+                <button type="button" data-tipo-jogo="pago" aria-pressed="false" class="min-h-9 rounded-md font-medium text-suave aria-pressed:bg-elevado aria-pressed:text-texto disabled:cursor-not-allowed">Pago</button>
+              </div>
+              <p id="jogo-tipo-dica" class="text-[13px] text-suave" hidden>O tipo não pode ser trocado depois do cadastro.</p>
+            </fieldset>
+            <button type="submit" id="form-jogo-salvar" class="min-h-11 rounded-md bg-destaque text-white font-semibold hover:brightness-110">Cadastrar jogo</button>
+            <div id="form-jogo-remocao" class="flex flex-col gap-2 border-t border-linha pt-3" hidden></div>
+            <div role="status" hidden></div>
+          </form>
+        </div>
+
+        <!-- gift cards -->
+        <div id="admin-gift" class="flex flex-wrap gap-4" hidden>
+          <form id="form-admin-gift" class="flex-[1_1_300px] max-w-[380px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5" novalidate>
+            <h2 class="text-lg font-semibold">Criar gift card</h2>
+            <div class="flex flex-col gap-1.5">
+              <label for="admin-gift-codigo" class="text-[#C9D1DB] font-medium">Código<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+              <input id="admin-gift-codigo" type="text" autocomplete="off" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label for="admin-gift-valor" class="text-[#C9D1DB] font-medium">Valor (R$)<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+              <input id="admin-gift-valor" type="text" inputmode="decimal" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+            </div>
+            <button type="submit" class="min-h-11 rounded-md bg-destaque text-white font-semibold hover:brightness-110">Criar gift card</button>
+            <div role="status" hidden></div>
+          </form>
+          <div class="flex-[999_1_380px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto self-start">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="text-left text-[13px] uppercase tracking-wider text-suave">
+                  <th class="px-4 py-3 font-medium border-b border-borda">Código</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda text-right">Valor</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda">Situação</th>
+                </tr>
+              </thead>
+              <tbody id="admin-gift-linhas"></tbody>
+            </table>
+            <p id="admin-gift-vazio" class="py-8 text-center text-suave" hidden>Nenhum gift card criado.</p>
+          </div>
+        </div>
+
+        <!-- contas -->
+        <div id="admin-contas" class="flex flex-wrap gap-4" hidden>
+          <div class="flex-[999_1_440px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto self-start">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="text-left text-[13px] uppercase tracking-wider text-suave">
+                  <th class="px-4 py-3 font-medium border-b border-borda w-14">Id</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda">Nome</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda text-right">Saldo</th>
+                  <th class="px-4 py-3 font-medium border-b border-borda text-right">Jogos</th>
+                </tr>
+              </thead>
+              <tbody id="admin-contas-linhas"></tbody>
+            </table>
+            <p id="admin-contas-vazio" class="py-8 text-center text-suave" hidden>Nenhuma conta cadastrada.</p>
+          </div>
+          <form id="form-remover-conta" class="flex-[1_1_300px] max-w-[380px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5" novalidate>
+            <p id="remover-conta-vazio" class="text-suave">Selecione uma conta na lista.</p>
+            <div id="remover-conta-campos" class="flex flex-col gap-3.5" hidden>
+              <h2 class="text-lg font-semibold">Remover a conta <span id="remover-conta-nome"></span></h2>
+              <p class="text-suave">A biblioteca e os cartões da conta também são apagados. Para confirmar, digite a senha da conta.</p>
+              <div class="flex flex-col gap-1.5">
+                <label for="remover-conta-senha" class="text-[#C9D1DB] font-medium">Senha da conta<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                <input id="remover-conta-senha" type="password" autocomplete="off" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+              </div>
+              <button type="submit" class="min-h-11 rounded-md bg-[#8A5A12] text-white font-semibold hover:brightness-110">Remover conta</button>
+            </div>
+            <div role="status" hidden></div>
+          </form>
+        </div>
+
+        <p class="text-[13px] text-suave"><span class="text-[#FF6B6B]">*</span> Campo obrigatório</p>
       </section>
 
       <!-- painel de mensagens: mostra o que as classes escreveram no cout -->

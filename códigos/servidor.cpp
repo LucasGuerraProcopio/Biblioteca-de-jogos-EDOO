@@ -65,6 +65,18 @@ int main(int argc, char* argv[])
 
     httplib::Server servidor;
 
+    // impede que dois servidores usem a porta 8080 ao mesmo tempo (por padrão o httplib deixa,
+    // e aí os pedidos se dividem entre o servidor novo e um antigo esquecido aberto)
+    servidor.set_socket_options([](socket_t soquete)
+    {
+        int ligado = 1;
+        #ifdef _WIN32
+        setsockopt(soquete, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char*)&ligado, sizeof(ligado));
+        #else
+        setsockopt(soquete, SOL_SOCKET, SO_REUSEADDR, (const char*)&ligado, sizeof(ligado));
+        #endif
+    });
+
     // o servidor atende vários pedidos ao mesmo tempo, mas as classes e o cout não foram
     // feitos para isso; esta trava garante que um pedido da API rode por vez
     mutex trava_api;
@@ -166,7 +178,9 @@ int main(int argc, char* argv[])
                           ", \"titulo\": " + json_texto(lista[i]->GetTitulo()) +
                           ", \"tamanho\": " + json_numero(lista[i]->GetTamanho()) +
                           ", \"preco\": " + json_numero(lista[i]->GetPreco()) +
-                          ", \"pago\": " + (lista[i]->EhPago() ? "true" : "false") + "}";
+                          ", \"pago\": " + (lista[i]->EhPago() ? "true" : "false") +
+                          ", \"usuario\": " + json_texto(lista[i]->GetConta()) +
+                          ", \"em_uso\": " + (usuarios.alguem_possui(lista[i]->GetId()) ? "true" : "false") + "}";
         };
         jogos_json += "]";
 
@@ -622,10 +636,253 @@ int main(int argc, char* argv[])
         responder_conta(resposta, sucesso, captura);
     });
 
+    // ===== Administração =====
+    // assim como no menu do terminal, a administração não exige login
+
+    // cadastrar jogo: tipo=gratuito ou tipo=pago (com preco)
+    servidor.Post("/api/admin/jogos", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        string titulo = pedido.get_param_value("titulo");
+        string usuario_jogo = pedido.get_param_value("usuario");
+        string senha_jogo = pedido.get_param_value("senha");
+        double tamanho = ler_valor(pedido.get_param_value("tamanho"));
+        double preco = ler_valor(pedido.get_param_value("preco"));
+        bool pago = pedido.get_param_value("tipo") == "pago";
+
+        if(titulo.size() == 0 || usuario_jogo.size() == 0 || senha_jogo.size() == 0)
+        {
+            cout << "Preencha todos os campos obrigatórios." << endl;
+        }
+        else if(tamanho <= 0)
+        {
+            cout << "O tamanho precisa ser maior que zero." << endl;
+        }
+        else if(pago == true && preco <= 0)
+        {
+            cout << "Jogos pagos precisam de um preço maior que zero." << endl;
+        }
+        else
+        {
+            // o catálogo guarda ponteiros para a classe base; cada tipo é criado com sua classe
+            jogo_base* novo = nullptr;
+            if(pago == true)
+            {
+                novo = new jogos_pagos(titulo, tamanho, senha_jogo, preco, usuario_jogo);
+            }
+            else
+            {
+                novo = new jogos_gratuitos(titulo, tamanho, senha_jogo, usuario_jogo);
+            };
+
+            // adicionar() recusa título repetido e cuida do delete nesse caso
+            int id_novo = loja.adicionar(novo);
+            if(id_novo != -1)
+            {
+                cout << "Jogo cadastrado com o id " << id_novo << "." << endl;
+                sucesso = true;
+            };
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // editar jogo: mesmas regras do atualizar_jogo do menu; senha vazia mantém a atual
+    servidor.Post("/api/admin/jogos/editar", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        jogo_base* jogo = loja.buscar_por_id(atoi(pedido.get_param_value("id").c_str()));
+        string titulo = pedido.get_param_value("titulo");
+        string usuario_jogo = pedido.get_param_value("usuario");
+        string senha_jogo = pedido.get_param_value("senha");
+        double tamanho = ler_valor(pedido.get_param_value("tamanho"));
+        double preco = ler_valor(pedido.get_param_value("preco"));
+
+        // só jogos pagos têm preço (dynamic_cast devolve nullptr se o jogo for gratuito)
+        jogos_pagos* jogo_pago = dynamic_cast<jogos_pagos*>(jogo);
+        jogo_base* outro_com_titulo = loja.buscar_por_titulo(titulo);
+
+        if(jogo == nullptr)
+        {
+            cout << "Esse jogo não existe." << endl;
+        }
+        else if(titulo.size() == 0 || usuario_jogo.size() == 0)
+        {
+            cout << "Preencha todos os campos obrigatórios." << endl;
+        }
+        else if(outro_com_titulo != nullptr && outro_com_titulo != jogo)
+        {
+            cout << "Já existe um jogo com o título: " << titulo << endl;
+        }
+        else if(tamanho <= 0)
+        {
+            cout << "O tamanho precisa ser maior que zero." << endl;
+        }
+        else if(jogo_pago != nullptr && preco <= 0)
+        {
+            cout << "Jogos pagos precisam de um preço maior que zero." << endl;
+        }
+        else
+        {
+            jogo->SetTitulo(titulo);
+            jogo->SetTamanho(tamanho);
+            jogo->SetConta(usuario_jogo);
+            if(senha_jogo.size() > 0)
+            {
+                jogo->SetSenha(senha_jogo);
+            };
+            if(jogo_pago != nullptr)
+            {
+                jogo_pago->SetValor(preco);
+            };
+
+            loja.salvar(jogo);
+            cout << "Jogo atualizado." << endl;
+            sucesso = true;
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // remover jogo: o excluir_jogo recusa se alguma conta tiver o jogo
+    servidor.Post("/api/admin/jogos/remover", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+
+        bool sucesso = usuarios.excluir_jogo(loja, atoi(pedido.get_param_value("id").c_str()));
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // lista os gift cards
+    servidor.Get("/api/admin/giftcards", [&](const httplib::Request&, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+
+        vector <gift_card> lista = banco.listar_gift_cards();
+        string json = "[";
+        for(size_t i = 0; i < lista.size(); i++)
+        {
+            if(i > 0)
+            {
+                json += ", ";
+            };
+            json += "{\"codigo\": " + json_texto(lista[i].GetCodigo()) +
+                    ", \"valor\": " + json_numero(lista[i].GetValor()) +
+                    ", \"valido\": " + (lista[i].EstaValido() ? "true" : "false") + "}";
+        };
+        json += "]";
+
+        resposta.set_content("{\"ok\": true, \"giftcards\": " + json +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // cria um gift card (o repositório recusa código repetido)
+    servidor.Post("/api/admin/giftcards", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        string codigo = pedido.get_param_value("codigo");
+        double valor = ler_valor(pedido.get_param_value("valor"));
+
+        if(codigo.size() == 0)
+        {
+            cout << "Digite o código do gift card." << endl;
+        }
+        else if(valor <= 0)
+        {
+            cout << "O valor precisa ser maior que zero." << endl;
+        }
+        else if(usuarios.criar_gift_card(codigo, valor) == true)
+        {
+            cout << "Gift card " << codigo << " criado com valor de " << valor << " reais." << endl;
+            sucesso = true;
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // lista as contas (sem senha)
+    servidor.Get("/api/admin/contas", [&](const httplib::Request&, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+
+        const vector <usuario*>& contas = usuarios.GetContas();
+        string json = "[";
+        for(size_t i = 0; i < contas.size(); i++)
+        {
+            if(i > 0)
+            {
+                json += ", ";
+            };
+            json += "{\"id\": " + to_string(contas[i]->GetId()) +
+                    ", \"nome\": " + json_texto(contas[i]->Getnome()) +
+                    ", \"saldo\": " + json_numero(contas[i]->GetSaldo()) +
+                    ", \"jogos\": " + to_string(contas[i]->GetBiblioteca().size()) + "}";
+        };
+        json += "]";
+
+        resposta.set_content("{\"ok\": true, \"contas\": " + json + ", \"mensagens\": []}", "application/json");
+    });
+
+    // remove uma conta; precisa da senha dela, como no menu
+    servidor.Post("/api/admin/contas/remover", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        int id_conta = atoi(pedido.get_param_value("id").c_str());
+        usuario* conta = usuarios.buscar_por_id(id_conta);
+
+        if(conta == nullptr)
+        {
+            cout << "Não existe conta com o id: " << id_conta << endl;
+        }
+        else if(conta->verificar_senha(pedido.get_param_value("senha")) == false)
+        {
+            cout << "Senha incorreta." << endl;
+        }
+        else
+        {
+            sucesso = usuarios.remover(id_conta);
+
+            // se a conta removida era a logada, ninguém fica logado
+            if(sucesso == true && id_conta == id_logado)
+            {
+                id_logado = -1;
+            };
+        };
+
+        resposta.set_content("{\"ok\": " + string(sucesso ? "true" : "false") + ", \"conta\": " + conta_json() +
+                             ", \"mensagens\": " + captura.mensagens_json() + "}", "application/json");
+    });
+
+    // primeiro reserva a porta; se outro servidor já estiver usando, avisa e encerra
+    if(servidor.bind_to_port("localhost", 8080) == false)
+    {
+        cout << "Não foi possível usar a porta 8080. Já existe outro servidor rodando?" << endl;
+        return 1;
+    };
+
     cout << "Interface disponível em http://localhost:8080" << endl;
     cout << "Para encerrar, aperte Ctrl + C." << endl;
 
-    servidor.listen("localhost", 8080);
+    servidor.listen_after_bind();
 
     return 0;
 }
