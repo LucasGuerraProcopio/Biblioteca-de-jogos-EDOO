@@ -11,6 +11,11 @@
 using namespace std;
 
 
+// regras do reembolso: até 14 dias depois da compra e com menos de 2 horas jogadas
+const int PRAZO_REEMBOLSO_DIAS = 14;
+const int LIMITE_HORAS_REEMBOLSO = 2;
+
+
 // Classe do usuario
 class usuario
 {
@@ -52,6 +57,13 @@ class usuario
             novo_item.valor_pago = valor;
             novo_item.cartao_pago = indice_cartao;
             biblioteca.push_back(novo_item);
+        };
+
+        // devolve o dinheiro pela mesma forma de pagamento usada na compra (Strategy)
+        void devolver_valor(forma_de_pagamento& forma, double valor, const jogo_base& jogo)
+        {
+            forma.estornar(valor);
+            cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << valor << " reais voltaram " << forma.GetDestino() << "." << endl;
         };
 
 
@@ -221,8 +233,9 @@ class usuario
         };
 
 
-        // adquirir o jogo
-        bool adquirir(const jogo_base& jogo)
+        // compra o jogo usando qualquer forma de pagamento (saldo ou cartão)
+        // jogo gratuito entra direto, sem cobrar nada
+        bool comprar(const jogo_base& jogo, forma_de_pagamento& forma)
         {
             if(possui(jogo.GetId()) == true)
             {
@@ -230,29 +243,29 @@ class usuario
                 return false;
             };
 
-            if(jogo.EhPago() == true)
-            {
-                if(saldo < jogo.GetPreco())
-                {
-                    cout << "Saldo insuficiente para comprar " << jogo.GetTitulo() << ". Preço: " << jogo.GetPreco() << " | Saldo: " << saldo << endl;
-                    return false;
-                };
-
-                saldo -= jogo.GetPreco();
-            };
-
-            // forma 1 = saldo, forma 0 = jogo gratuito (não pagou nada)
-            if(jogo.EhPago() == true)
-            {
-                registrar_item(jogo.GetId(), 1, jogo.GetPreco(), -1);
-            }
-            else
+            if(jogo.EhPago() == false)
             {
                 registrar_item(jogo.GetId(), 0, 0, -1);
+                cout << "O jogo: " << jogo.GetTitulo() << " foi adicionado à sua biblioteca." << endl;
+                return true;
             };
 
+            if(forma.pagar(jogo.GetPreco()) == false)
+            {
+                return false;
+            };
+
+            // guarda como e quanto foi pago, para o reembolso devolver certo
+            registrar_item(jogo.GetId(), forma.GetCodigo(), jogo.GetPreco(), forma.GetIndiceCartao());
             cout << "O jogo: " << jogo.GetTitulo() << " foi adicionado à sua biblioteca." << endl;
             return true;
+        };
+
+        // adquirir o jogo pagando com o saldo
+        bool adquirir(const jogo_base& jogo)
+        {
+            pagamento_saldo forma(saldo);
+            return comprar(jogo, forma);
         };
 
         // adquirir o jogo pago com um cartão cadastrado
@@ -269,21 +282,8 @@ class usuario
                 return false;
             };
 
-            if(possui(jogo.GetId()) == true)
-            {
-                cout << "Você já possui o jogo: " << jogo.GetTitulo() << endl;
-                return false;
-            };
-
-            if(cartoes_cadastrados[indice_cartao].gastar(jogo.GetPreco()) == false)
-            {
-                return false;
-            };
-
-            // forma 2 = cartão, guarda qual cartão foi usado
-            registrar_item(jogo.GetId(), 2, jogo.GetPreco(), indice_cartao);
-            cout << "O jogo: " << jogo.GetTitulo() << " foi adicionado à sua biblioteca." << endl;
-            return true;
+            pagamento_cartao forma(cartoes_cadastrados[indice_cartao], indice_cartao);
+            return comprar(jogo, forma);
         };
 
 
@@ -354,7 +354,8 @@ class usuario
         };
 
 
-        // reembolso: devolve o valor que foi pago, no saldo ou no cartão usado na compra
+        // reembolso: só até 14 dias depois da compra e com menos de 2 horas jogadas
+        // devolve o valor que foi pago, no saldo ou no cartão usado na compra
         bool reembolsar(const jogo_base& jogo)
         {
             if(jogo.EhPago() == false)
@@ -363,40 +364,67 @@ class usuario
                 return false;
             };
 
-            for(size_t i = 0; i < biblioteca.size(); i++)
+            item_biblioteca* item = buscar_item(jogo.GetId());
+
+            if(item == nullptr)
             {
-                if(biblioteca[i].id_jogo == jogo.GetId())
+                cout << "Você não possui esse jogo: " << jogo.GetTitulo() << endl;
+                return false;
+            };
+
+            // regra do prazo (compras antigas sem data ficam de fora desta regra)
+            if(item->data_compra > 0)
+            {
+                long long dias = (time(nullptr) - item->data_compra) / 86400;
+
+                if(dias > PRAZO_REEMBOLSO_DIAS)
                 {
-                    item_biblioteca item = biblioteca[i];
-
-                    // compras antigas não guardaram o valor pago, então usa o preço atual
-                    double valor = item.valor_pago;
-                    if(valor <= 0)
-                    {
-                        valor = jogo.GetPreco();
-                    };
-
-                    biblioteca.erase(biblioteca.begin() + i);
-
-                    bool cartao_valido = (item.cartao_pago >= 0 && item.cartao_pago < (int)cartoes_cadastrados.size());
-
-                    if(item.forma_pagamento == 2 && cartao_valido == true)
-                    {
-                        // a compra foi no cartão: o dinheiro volta para o cartão, não para o saldo
-                        cartoes_cadastrados[item.cartao_pago].estornar(valor);
-                        cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << valor << " reais voltaram ao cartão." << endl;
-                    }
-                    else
-                    {
-                        saldo += valor;
-                        cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << valor << " reais voltaram ao seu saldo." << endl;
-                    };
-                    return true;
+                    cout << "Reembolso negado: o prazo é de " << PRAZO_REEMBOLSO_DIAS << " dias e você comprou há " << dias << " dias." << endl;
+                    return false;
                 };
             };
 
-            cout << "Você não possui esse jogo: " << jogo.GetTitulo() << endl;
-            return false;
+            // regra das horas jogadas
+            if(item->horas_jogadas >= LIMITE_HORAS_REEMBOLSO)
+            {
+                cout << "Reembolso negado: só é possível com menos de " << LIMITE_HORAS_REEMBOLSO << " horas jogadas e você jogou " << item->horas_jogadas << "." << endl;
+                return false;
+            };
+
+            // copia os dados do item antes de tirá-lo da biblioteca
+            item_biblioteca copia = *item;
+
+            // compras antigas não guardaram o valor pago, então usa o preço atual
+            double valor = copia.valor_pago;
+            if(valor <= 0)
+            {
+                valor = jogo.GetPreco();
+            };
+
+            for(size_t i = 0; i < biblioteca.size(); i++)
+            {
+                if(biblioteca[i].id_jogo == copia.id_jogo)
+                {
+                    biblioteca.erase(biblioteca.begin() + i);
+                    break;
+                };
+            };
+
+            bool no_cartao = (copia.forma_pagamento == 2 && copia.cartao_pago >= 0 && copia.cartao_pago < (int)cartoes_cadastrados.size());
+
+            if(no_cartao == true)
+            {
+                // a compra foi no cartão: o dinheiro volta para o cartão, não para o saldo
+                pagamento_cartao forma(cartoes_cadastrados[copia.cartao_pago], copia.cartao_pago);
+                devolver_valor(forma, valor, jogo);
+            }
+            else
+            {
+                pagamento_saldo forma(saldo);
+                devolver_valor(forma, valor, jogo);
+            };
+
+            return true;
         };
 
 
@@ -694,7 +722,7 @@ class repositorio_usuarios
             return loja.remover(id_jogo);
         };
 
-        // cria um gift card novo, recusa se o código já existir
+        // cria um gift card novo
         bool criar_gift_card(const string& codigo, double valor)
         {
             if(banco == nullptr)
@@ -709,7 +737,6 @@ class repositorio_usuarios
                 return false;
             };
 
-            // inserir_gift_card falha se o código já existir, então nunca substitui um gift card
             return banco->inserir_gift_card(gift_card(codigo, valor));
         };
 
@@ -732,7 +759,7 @@ class repositorio_usuarios
             bool estava_valido = card.EstaValido();
             conta->Cadastrar_GiftCard(card, codigo);
 
-            // se o cartão foi usado agora, marca como usado no banco e salva o novo saldo
+            // se o cartão foi usado marca como usado no banco e salva o saldo
             if(estava_valido == true && card.EstaValido() == false)
             {
                 banco->salvar_gift_card(card);
