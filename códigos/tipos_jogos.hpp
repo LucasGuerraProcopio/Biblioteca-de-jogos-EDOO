@@ -4,8 +4,10 @@
 using namespace std;
 
 
-// Classe dos jogos gratuitos
-class jogos_gratuitos
+// Classe base ABSTRATA de todos os jogos
+// tem funções virtuais puras (= 0), então não pode ser criada direto:
+// só existem jogos gratuitos ou pagos
+class jogo_base
 {
     // Informações sobre o jogo
     protected:
@@ -20,10 +22,10 @@ class jogos_gratuitos
         string usuario_jogo;
 
 
-    // Operações dos jogos gratuitos
+    // Operações comuns a todos os jogos
     public:
-        // Construtor dos jogos gratuitos
-        jogos_gratuitos()
+        // Construtor padrão
+        jogo_base()
         {
             this->titulo_jogo = "Jogo sem nome";
             this->tamanho_jogo = 1;
@@ -31,17 +33,17 @@ class jogos_gratuitos
             this->usuario_jogo = "New_Player123";
         };
 
-        // Construtor do jogo gratuito
-        jogos_gratuitos(string titulo_jogo_gratuito, double tamanho_jogo_gratuito, string senha_gratuito, string usuario_gratuito = "Player 1")
+        // Construtor com os dados do jogo
+        jogo_base(string novo_titulo, double novo_tamanho, string nova_senha, string novo_usuario = "Player 1")
         {
-            this->titulo_jogo = titulo_jogo_gratuito;
-            this->tamanho_jogo = tamanho_jogo_gratuito;
-            this->senha_jogo = senha_gratuito;
-            this->usuario_jogo = usuario_gratuito;
+            this->titulo_jogo = novo_titulo;
+            this->tamanho_jogo = novo_tamanho;
+            this->senha_jogo = nova_senha;
+            this->usuario_jogo = novo_usuario;
         };
 
         // construtor de copia
-        jogos_gratuitos(const jogos_gratuitos &jogoantigo)
+        jogo_base(const jogo_base &jogoantigo)
         {
             this->id = jogoantigo.id;
             this->titulo_jogo = jogoantigo.titulo_jogo;
@@ -51,34 +53,28 @@ class jogos_gratuitos
         };
 
         // destrutor virtual
-        virtual ~jogos_gratuitos() {};
+        virtual ~jogo_base() {};
 
         // comparadores pelo tamanho do jogo
-        bool operator<(const jogos_gratuitos &outro) const
+        bool operator<(const jogo_base &outro) const
         {
             return tamanho_jogo < outro.tamanho_jogo;
         };
 
-        bool operator>(const jogos_gratuitos &outro) const
+        bool operator>(const jogo_base &outro) const
         {
             return tamanho_jogo > outro.tamanho_jogo;
         };
 
-        bool operator==(const jogos_gratuitos &outro) const
+        bool operator==(const jogo_base &outro) const
         {
             return tamanho_jogo == outro.tamanho_jogo;
         };
 
 
-        // Funções virtuais
-        virtual double GetPreco() const
-        {
-            return 0;
-        };
-        virtual bool EhPago() const
-        {
-            return false;
-        };
+        // Funções virtuais puras: cada classe filha é obrigada a implementar
+        virtual double GetPreco() const = 0;
+        virtual bool EhPago() const = 0;
 
         // tipo do jogo como fica salvo na coluna tipo do banco
         string GetTipo() const
@@ -168,8 +164,32 @@ class jogos_gratuitos
 };
 
 
-// Classe dos jogos pagos que herda da classe dos jogos gratuitos
-class jogos_pagos : public jogos_gratuitos
+// Classe dos jogos gratuitos
+class jogos_gratuitos : public jogo_base
+{
+    public:
+        // construtor: repassa os dados para a classe base
+        jogos_gratuitos(string titulo_jogo_gratuito, double tamanho_jogo_gratuito, string senha_gratuito, string usuario_gratuito = "Player 1") : jogo_base(titulo_jogo_gratuito, tamanho_jogo_gratuito, senha_gratuito, usuario_gratuito)
+        {
+        };
+
+        // destrutor
+        ~jogos_gratuitos() override {};
+
+        // jogo gratuito não tem preço
+        double GetPreco() const override
+        {
+            return 0;
+        };
+        bool EhPago() const override
+        {
+            return false;
+        };
+};
+
+
+// Classe dos jogos pagos, também herda da classe base
+class jogos_pagos : public jogo_base
 {
     // Informações do preço do jogo pago
     private:
@@ -179,7 +199,7 @@ class jogos_pagos : public jogos_gratuitos
     // Operações com os jogos pagos
     public:
         // construtor
-        jogos_pagos(string titulo_jogo_pago, double tamanho_jogo_pago, string senha_pago, double preco_jogo, string usuario_pago = "Player 1") : jogos_gratuitos(titulo_jogo_pago, tamanho_jogo_pago, senha_pago, usuario_pago)
+        jogos_pagos(string titulo_jogo_pago, double tamanho_jogo_pago, string senha_pago, double preco_jogo, string usuario_pago = "Player 1") : jogo_base(titulo_jogo_pago, tamanho_jogo_pago, senha_pago, usuario_pago)
         {
             this->valor_jogo = preco_jogo;
         };

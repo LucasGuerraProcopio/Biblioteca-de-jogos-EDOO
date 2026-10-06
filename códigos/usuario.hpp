@@ -203,7 +203,7 @@ class usuario
 
 
         // adquirir o jogo
-        bool adquirir(const jogos_gratuitos& jogo)
+        bool adquirir(const jogo_base& jogo)
         {
             if(possui(jogo.GetId()) == true)
             {
@@ -228,7 +228,7 @@ class usuario
         };
 
         // adquirir o jogo pago com um cartão cadastrado
-        bool adquirir_com_cartao(const jogos_gratuitos& jogo, int indice_cartao)
+        bool adquirir_com_cartao(const jogo_base& jogo, int indice_cartao)
         {
             if(jogo.EhPago() == false)
             {
@@ -297,7 +297,7 @@ class usuario
 
 
         // reembolso
-        bool reembolsar(const jogos_gratuitos& jogo)
+        bool reembolsar(const jogo_base& jogo)
         {
             if(jogo.EhPago() == false)
             {
@@ -328,7 +328,7 @@ class usuario
 
             for(size_t i = 0; i < biblioteca.size(); i++)
             {
-                jogos_gratuitos* jogo = loja.buscar_por_id(biblioteca[i].id_jogo);
+                jogo_base* jogo = loja.buscar_por_id(biblioteca[i].id_jogo);
 
                 cout << "  - [" << biblioteca[i].id_jogo << "] ";
 
@@ -553,7 +553,7 @@ class repositorio_usuarios
         // delete do jogo da loja
         bool excluir_jogo(catalogo& loja, int id_jogo) const
         {
-            jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+            jogo_base* jogo = loja.buscar_por_id(id_jogo);
 
             if(jogo == nullptr)
             {
@@ -614,7 +614,7 @@ class repositorio_usuarios
                 salvar(conta);
             };
         };
-        
+
         // Lista as contas
         void listar() const
         {

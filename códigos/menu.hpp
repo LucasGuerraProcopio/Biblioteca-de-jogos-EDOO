@@ -69,7 +69,7 @@ inline void atualizar_jogo(catalogo& loja)
     cout << "\n--- Atualizar jogo ---" << endl;
 
     int id_jogo = ler_inteiro("Id do jogo: ");
-    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+    jogo_base* jogo = loja.buscar_por_id(id_jogo);
 
     if(jogo == nullptr)
     {
@@ -252,7 +252,7 @@ inline void remover_jogo(catalogo& loja, repositorio_usuarios& usuarios)
     loja.listar();
 
     int id_jogo = ler_inteiro("Id do jogo: ");
-    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+    jogo_base* jogo = loja.buscar_por_id(id_jogo);
 
     if(jogo == nullptr)
     {
@@ -289,7 +289,7 @@ inline void buscar_jogo(catalogo& loja)
     if(opcao == 1)
     {
         int id_jogo = ler_inteiro("Id do jogo: ");
-        jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+        jogo_base* jogo = loja.buscar_por_id(id_jogo);
 
         if(jogo == nullptr)
         {
@@ -307,7 +307,7 @@ inline void buscar_jogo(catalogo& loja)
             return;
         };
 
-        vector <jogos_gratuitos*> encontrados = loja.buscar_por_trecho(trecho);
+        vector <jogo_base*> encontrados = loja.buscar_por_trecho(trecho);
 
         if(encontrados.size() == 0)
         {
@@ -411,7 +411,7 @@ inline void conta_comprar_jogo(usuario& conta, catalogo& loja)
     cout << "\n--- Comprar jogo ---" << endl;
  
     int id_jogo = ler_inteiro("Id do jogo: ");
-    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+    jogo_base* jogo = loja.buscar_por_id(id_jogo);
  
     if(jogo == nullptr)
     {
@@ -483,7 +483,7 @@ inline void conta_desinstalar(usuario& conta)
 inline void conta_reembolsar(usuario& conta, catalogo& loja)
 {
     int id_jogo = ler_inteiro("Id do jogo para reembolsar: ");
-    jogos_gratuitos* jogo = loja.buscar_por_id(id_jogo);
+    jogo_base* jogo = loja.buscar_por_id(id_jogo);
  
     if(jogo == nullptr)
     {

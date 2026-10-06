@@ -202,7 +202,7 @@ class banco_de_dados
 
         // JOGOS
         // salva o jogo no banco
-        bool inserir_jogo(const jogos_gratuitos& jogo)
+        bool inserir_jogo(const jogo_base& jogo)
         {
             sqlite3_stmt* comando = nullptr;
             if(sqlite3_prepare_v2(conexao, "INSERT INTO jogos (id, titulo, tamanho, preco, usuario, senha, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
@@ -233,9 +233,9 @@ class banco_de_dados
 
 
         // le todos os jogos salvos e devolve PONTEIROS para objetos criados com new
-        vector <jogos_gratuitos*> carregar_jogos()
+        vector <jogo_base*> carregar_jogos()
         {
-            vector <jogos_gratuitos*> jogos_salvos;
+            vector <jogo_base*> jogos_salvos;
 
             sqlite3_stmt* comando = nullptr;
             if(sqlite3_prepare_v2(conexao, "SELECT id, titulo, tamanho, preco, usuario, senha, tipo FROM jogos ORDER BY id", -1, &comando, nullptr) != SQLITE_OK)
@@ -254,7 +254,7 @@ class banco_de_dados
                 string senha = ler_coluna_texto(comando, 5);
                 string tipo = ler_coluna_texto(comando, 6);
 
-                jogos_gratuitos* jogo = nullptr;
+                jogo_base* jogo = nullptr;
 
                 if(tipo == "pago")
                 {
@@ -274,7 +274,7 @@ class banco_de_dados
         };
 
         // atualiza os dados de um jogo que já está no banco
-        bool atualizar_jogo(const jogos_gratuitos& jogo)
+        bool atualizar_jogo(const jogo_base& jogo)
         {
             sqlite3_stmt* comando = nullptr;
             if(sqlite3_prepare_v2(conexao, "UPDATE jogos SET titulo = ?, tamanho = ?, preco = ?, usuario = ?, senha = ?, tipo = ? WHERE id = ?", -1, &comando, nullptr) != SQLITE_OK)

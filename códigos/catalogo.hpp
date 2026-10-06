@@ -13,7 +13,7 @@ class catalogo
 {
     // Lista dos jogos que guarda PONTEIROS para os objetos
     private:
-        vector <jogos_gratuitos*> jogos;
+        vector <jogo_base*> jogos;
         int proximo_id = 1;
         banco_de_dados* banco = nullptr; // Banco onde os jogos são salvos
 
@@ -49,7 +49,7 @@ class catalogo
         catalogo& operator=(const catalogo&) = delete;
 
         // Cadastra o jogo e devolve o id
-        int adicionar(jogos_gratuitos* novo_jogo)
+        int adicionar(jogo_base* novo_jogo)
         {
             if(buscar_por_titulo(novo_jogo->GetTitulo()) != nullptr)
             {
@@ -88,7 +88,7 @@ class catalogo
                 return 0;
             };
 
-            vector <jogos_gratuitos*> jogos_salvos = banco->carregar_jogos();
+            vector <jogo_base*> jogos_salvos = banco->carregar_jogos();
 
             for(size_t i = 0; i < jogos_salvos.size(); i++)
             {
@@ -114,7 +114,7 @@ class catalogo
         };
 
         // salva no banco as mudanças feitas no jogo
-        bool salvar(jogos_gratuitos* jogo)
+        bool salvar(jogo_base* jogo)
         {
             if(jogo == nullptr || banco == nullptr)
             {
@@ -147,7 +147,7 @@ class catalogo
 
 
         // Buscas
-        jogos_gratuitos* buscar_por_id(int id_procurado) const
+        jogo_base* buscar_por_id(int id_procurado) const
         {
             for(size_t i = 0; i < jogos.size(); i++)
             {
@@ -159,7 +159,7 @@ class catalogo
             return nullptr;
         };
 
-        jogos_gratuitos* buscar_por_titulo(string titulo_procurado) const
+        jogo_base* buscar_por_titulo(string titulo_procurado) const
         {
             for(size_t i = 0; i < jogos.size(); i++)
             {
@@ -173,9 +173,9 @@ class catalogo
 
 
         // devolve os jogos cujo título contém o texto, sem diferenciar maiúsculas de minúsculas
-        vector <jogos_gratuitos*> buscar_por_trecho(string trecho) const
+        vector <jogo_base*> buscar_por_trecho(string trecho) const
         {
-            vector <jogos_gratuitos*> encontrados;
+            vector <jogo_base*> encontrados;
             string trecho_minusculo = para_minusculas(trecho);
 
             for(size_t i = 0; i < jogos.size(); i++)
