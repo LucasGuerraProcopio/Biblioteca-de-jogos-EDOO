@@ -50,7 +50,7 @@ class cartao_de_credito
             return true;
         };
 
-        // devolve o valor ao cartão (usado no reembolso de uma compra feita com ele)
+        // devolve o valor pro cartão
         void estornar(double valor_estorno)
         {
             if(valor_estorno <= 0)
@@ -91,6 +91,116 @@ class cartao_de_credito
         double GetLimite() const
         {
             return limite_credito;
+        };
+};
+
+
+// classe das formas de pagamento
+class forma_de_pagamento
+{
+    public:
+        virtual ~forma_de_pagamento() {};
+
+        virtual bool pagar(double valor) = 0;
+
+        // devolve o valor para onde ele saiu
+        virtual void estornar(double valor) = 0;
+
+        // código guardado na biblioteca
+        virtual int GetCodigo() const = 0;
+
+        // mensagem de reembolso
+        virtual string GetDestino() const = 0;
+
+        // posição do cartão na lista de cartões
+        virtual int GetIndiceCartao() const
+        {
+            return -1;
+        };
+};
+
+
+// pagar com o saldo da conta
+class pagamento_saldo : public forma_de_pagamento
+{
+    private:
+        double& saldo_conta; // mexe direto no saldo do usuário
+
+    public:
+        pagamento_saldo(double& saldo_da_conta) : saldo_conta(saldo_da_conta)
+        {
+        };
+
+        bool pagar(double valor) override
+        {
+            if(valor <= 0)
+            {
+                cout << "Valor de compra inválido." << endl;
+                return false;
+            };
+
+            if(saldo_conta < valor)
+            {
+                cout << "Saldo insuficiente. Valor: " << valor << " | Saldo: " << saldo_conta << endl;
+                return false;
+            };
+
+            saldo_conta -= valor;
+            return true;
+        };
+
+        void estornar(double valor) override
+        {
+            saldo_conta += valor;
+        };
+
+        int GetCodigo() const override
+        {
+            return 1;
+        };
+
+        string GetDestino() const override
+        {
+            return "ao seu saldo";
+        };
+};
+
+
+// pagar com um cartão de crédito cadastrado
+class pagamento_cartao : public forma_de_pagamento
+{
+    private:
+        cartao_de_credito& cartao; // mexe direto no cartão do usuário
+        int indice_cartao;
+
+    public:
+        pagamento_cartao(cartao_de_credito& cartao_usado, int indice) : cartao(cartao_usado), indice_cartao(indice)
+        {
+        };
+
+        bool pagar(double valor) override
+        {
+            return cartao.gastar(valor);
+        };
+
+        void estornar(double valor) override
+        {
+            cartao.estornar(valor);
+        };
+
+        int GetCodigo() const override
+        {
+            return 2;
+        };
+
+        string GetDestino() const override
+        {
+            return "ao cartão";
+        };
+
+        int GetIndiceCartao() const override
+        {
+            return indice_cartao;
         };
 };
 

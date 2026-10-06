@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdlib>
 #include <iostream>
 #include <string>
 using namespace std;
@@ -22,7 +23,7 @@ inline string ler_texto(string pergunta)
 }
 
 
-// Lê número inteiro e repete se o que foi digitado não for um número
+// Lê número inteiro
 inline int ler_inteiro(string pergunta)
 {
     int numero = 0;
@@ -45,24 +46,60 @@ inline int ler_inteiro(string pergunta)
 }
 
 
-// Lê número com ponto decimal e repete se não for maior que zero
+// Lê número decimal maior que zero
 inline double ler_positivo(string pergunta)
 {
-    double numero = 0;
+    string texto;
 
-    cout << pergunta;
-    while(!(cin >> numero) || numero <= 0 || cin.peek() != '\n')
+    while(true)
     {
-        if(cin.eof())
+        cout << pergunta;
+
+        if(!getline(cin, texto))
         {
             return 0;
         };
 
-        cin.clear();
-        cin.ignore(10000, '\n');
-        cout << "Digite um número maior que zero, com ponto nos decimais. " << pergunta;
-    };
-    cin.ignore(10000, '\n');
+        // troca a vírgula por ponto
+        for(size_t i = 0; i < texto.size(); i++)
+        {
+            if(texto[i] == ',')
+            {
+                texto[i] = '.';
+            };
+        };
 
-    return numero;
+        // só aceita dígitos e no máximo um ponto
+        bool valido = true;
+        int pontos = 0;
+        int digitos = 0;
+
+        for(size_t i = 0; i < texto.size(); i++)
+        {
+            if(texto[i] == '.')
+            {
+                pontos++;
+            }
+            else if(texto[i] >= '0' && texto[i] <= '9')
+            {
+                digitos++;
+            }
+            else
+            {
+                valido = false;
+            };
+        };
+
+        if(valido == true && pontos <= 1 && digitos > 0 && digitos <= 15)
+        {
+            double numero = atof(texto.c_str());
+
+            if(numero > 0)
+            {
+                return numero;
+            };
+        };
+
+        cout << "Digite um número maior que zero (ponto ou vírgula nos decimais). ";
+    };
 }
