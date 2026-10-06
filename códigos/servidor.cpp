@@ -51,13 +51,13 @@ int main(int argc, char* argv[])
 
         if(carregados > 0)
         {
-            cout << carregados << " jogos carregados do banco." << endl;
+            cout << carregados << (carregados == 1 ? " jogo carregado" : " jogos carregados") << " do banco." << endl;
         };
 
         int contas_carregadas = usuarios.carregar_do_banco();
         if(contas_carregadas > 0)
         {
-            cout << contas_carregadas << " contas carregadas do banco." << endl;
+            cout << contas_carregadas << (contas_carregadas == 1 ? " conta carregada" : " contas carregadas") << " do banco." << endl;
         };
 
         mensagens_iniciais = captura.mensagens_json();
@@ -189,6 +189,16 @@ int main(int argc, char* argv[])
         return usuarios.buscar_por_id(id_logado);
     };
 
+    // só os 4 últimos dígitos do cartão saem do C++ (o número completo nunca vai para a tela)
+    auto final_cartao = [](const string& numero) -> string
+    {
+        if(numero.size() > 4)
+        {
+            return numero.substr(numero.size() - 4);
+        };
+        return numero;
+    };
+
     // monta o JSON da conta logada (dados, biblioteca e cartões), ou null se ninguém entrou
     auto conta_json = [&]() -> string
     {
@@ -211,7 +221,7 @@ int main(int argc, char* argv[])
             string cartao_final = "";
             if(item.forma_pagamento == 2 && item.cartao_pago >= 0 && item.cartao_pago < (int)cartoes.size())
             {
-                cartao_final = cartoes[item.cartao_pago].GetNumero();
+                cartao_final = final_cartao(cartoes[item.cartao_pago].GetNumero());
             };
 
             if(i > 0)
@@ -240,7 +250,7 @@ int main(int argc, char* argv[])
             };
 
             lista_cartoes += "{\"indice\": " + to_string(i) +
-                             ", \"final\": " + json_texto(cartoes[i].GetNumero()) +
+                             ", \"final\": " + json_texto(final_cartao(cartoes[i].GetNumero())) +
                              ", \"validade\": " + json_texto(cartoes[i].GetValidade()) +
                              ", \"limite\": " + json_numero(cartoes[i].GetLimite()) +
                              ", \"gastos\": " + json_numero(cartoes[i].GetGastos()) + "}";
@@ -253,7 +263,9 @@ int main(int argc, char* argv[])
                ", \"biblioteca\": " + itens +
                ", \"cartoes\": " + lista_cartoes +
                ", \"prazo_reembolso_dias\": " + to_string(PRAZO_REEMBOLSO_DIAS) +
-               ", \"limite_horas_reembolso\": " + to_string(LIMITE_HORAS_REEMBOLSO) + "}";
+               ", \"limite_horas_reembolso\": " + to_string(LIMITE_HORAS_REEMBOLSO) +
+               ", \"pix_chave\": " + json_texto(pix().GetChave()) +
+               ", \"pix_taxa\": " + json_numero(pix().GetTaxa()) + "}";
     };
 
     // resposta padrão das ações da conta: se deu certo, a conta atualizada e as mensagens do cout
@@ -484,6 +496,129 @@ int main(int argc, char* argv[])
         {
             usuarios.salvar(conta);
         };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    // ===== Carteira =====
+
+    // lê um número digitado na tela, aceitando vírgula ou ponto nos decimais
+    auto ler_valor = [](string texto) -> double
+    {
+        for(size_t i = 0; i < texto.size(); i++)
+        {
+            if(texto[i] == ',')
+            {
+                texto[i] = '.';
+            };
+        };
+        return atof(texto.c_str());
+    };
+
+    // depósito via pix: usa o depositar_pix do usuario (confere a chave e desconta a taxa)
+    servidor.Post("/api/pix", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else
+        {
+            double saldo_antes = conta->GetSaldo();
+            conta->depositar_pix(ler_valor(pedido.get_param_value("valor")), pedido.get_param_value("chave"));
+
+            // o depositar_pix não devolve nada: se o saldo subiu, deu certo
+            sucesso = conta->GetSaldo() > saldo_antes;
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    // cadastro de cartão: mesmas validações do menu
+    servidor.Post("/api/cartoes", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        string numero = pedido.get_param_value("numero");
+        string validade = pedido.get_param_value("validade");
+        int cvc = atoi(pedido.get_param_value("cvc").c_str());
+        double limite = ler_valor(pedido.get_param_value("limite"));
+
+        // tira espaços do número (ex.: "1234 5678 ...")
+        string so_digitos = "";
+        for(size_t i = 0; i < numero.size(); i++)
+        {
+            if(numero[i] != ' ')
+            {
+                so_digitos += numero[i];
+            };
+        };
+
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else if(so_digitos.size() < 4 || validade.size() == 0)
+        {
+            cout << "Preencha o número do cartão e a validade." << endl;
+        }
+        else if(cvc < 1 || cvc > 9999)
+        {
+            cout << "O CVC tem 3 ou 4 dígitos." << endl;
+        }
+        else if(limite <= 0)
+        {
+            cout << "O limite precisa ser maior que zero." << endl;
+        }
+        else
+        {
+            conta->adicionar_cartao(cartao_de_credito(so_digitos, cvc, validade, limite));
+            sucesso = true;
+        };
+
+        if(sucesso == true)
+        {
+            usuarios.salvar(conta);
+        };
+        responder_conta(resposta, sucesso, captura);
+    });
+
+    // resgate de gift card: o repositório confere o código no banco, credita e salva
+    servidor.Post("/api/giftcard", [&](const httplib::Request& pedido, httplib::Response& resposta)
+    {
+        lock_guard<mutex> trava(trava_api);
+        captura_cout captura;
+        bool sucesso = false;
+
+        usuario* conta = conta_logada();
+        string codigo = pedido.get_param_value("codigo");
+
+        if(conta == nullptr)
+        {
+            cout << "Entre na conta primeiro." << endl;
+        }
+        else if(codigo.size() == 0)
+        {
+            cout << "Digite o código do gift card." << endl;
+        }
+        else
+        {
+            double saldo_antes = conta->GetSaldo();
+            usuarios.resgatar_gift_card(conta, codigo);
+            sucesso = conta->GetSaldo() > saldo_antes;
+        };
+
         responder_conta(resposta, sucesso, captura);
     });
 

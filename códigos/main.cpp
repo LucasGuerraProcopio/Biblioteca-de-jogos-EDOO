@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
     if(carregados > 0)
     {
-        cout << carregados << " jogos carregados do banco." << endl;
+        cout << carregados << (carregados == 1 ? " jogo carregado" : " jogos carregados") << " do banco." << endl;
     };
 
     // carrega as contas salvas, com biblioteca, saldo e cartões
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
     if(contas_carregadas > 0)
     {
-        cout << contas_carregadas << " contas carregadas do banco." << endl;
+        cout << contas_carregadas << (contas_carregadas == 1 ? " conta carregada" : " contas carregadas") << " do banco." << endl;
     };
 
     executar_menu(loja, usuarios);

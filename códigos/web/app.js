@@ -543,6 +543,7 @@ function desenharConta() {
 
   document.getElementById("biblioteca-vazia").hidden = conta.biblioteca.length > 0;
   desenharAcoesConta();
+  desenharCarteira();
 }
 
 // painel da direita: instalar, jogar e reembolsar o jogo selecionado
@@ -666,6 +667,134 @@ async function acaoConta(caminho, dados, status) {
     mostrarStatus(caixa, resposta.ok, ultimaMensagem(resposta, resposta.ok ? "Feito." : "Não foi possível."));
   }
 }
+
+
+// ===== Minha conta: abas e carteira =====
+
+document.querySelectorAll("button[data-aba-conta]").forEach(function (aba) {
+  aba.addEventListener("click", function () {
+    const escolhida = aba.dataset.abaConta;
+    document.querySelectorAll("button[data-aba-conta]").forEach(function (outra) {
+      outra.setAttribute("aria-selected", outra === aba ? "true" : "false");
+    });
+    document.getElementById("conteudo-biblioteca").hidden = escolhida !== "biblioteca";
+    document.getElementById("conteudo-carteira").hidden = escolhida !== "carteira";
+  });
+});
+
+// lê um valor digitado aceitando vírgula ou ponto
+function lerValor(texto) {
+  return parseFloat(String(texto).replace(",", "."));
+}
+
+function desenharCarteira() {
+  const conta = contaAtual;
+
+  document.getElementById("pix-info").textContent =
+    "Chave pix da biblioteca · taxa de " + (conta.pix_taxa * 100).toLocaleString("pt-BR") + "%";
+  document.getElementById("pix-chave-loja").textContent = conta.pix_chave;
+  atualizarPreviaPix();
+
+  const lista = document.getElementById("lista-cartoes");
+  lista.innerHTML = "";
+
+  if (conta.cartoes.length === 0) {
+    lista.appendChild(criar("p", "text-suave", "Nenhum cartão cadastrado."));
+  }
+
+  for (const cartao of conta.cartoes) {
+    const caixa = criar("div", "px-4 py-3.5 rounded-lg bg-fundo border border-borda flex flex-col gap-2.5");
+
+    const topo = criar("div", "flex justify-between gap-3");
+    topo.appendChild(criar("span", "font-mono font-medium", "•••• " + cartao.final));
+    topo.appendChild(criar("span", "font-mono text-suave", "val. " + cartao.validade));
+    caixa.appendChild(topo);
+
+    // barra com quanto do limite já foi usado
+    const usado = cartao.limite > 0 ? Math.min(100, Math.round((cartao.gastos / cartao.limite) * 100)) : 0;
+    const barra = criar("div", "h-1.5 rounded-full bg-linha overflow-hidden");
+    barra.setAttribute("aria-hidden", "true");
+    const preenchido = criar("div", "h-full bg-destaque");
+    preenchido.style.width = usado + "%";
+    barra.appendChild(preenchido);
+    caixa.appendChild(barra);
+
+    const valores = criar("div", "flex justify-between gap-3 text-sm text-suave");
+    valores.appendChild(criar("span", "", "Disponível " + formatoReais.format(cartao.limite - cartao.gastos)));
+    valores.appendChild(criar("span", "", "Limite " + formatoReais.format(cartao.limite)));
+    caixa.appendChild(valores);
+
+    lista.appendChild(caixa);
+  }
+}
+
+// prévia do pix: quanto vai de taxa e quanto entra no saldo
+function atualizarPreviaPix() {
+  const valor = lerValor(document.getElementById("pix-valor").value);
+  const previa = document.getElementById("pix-previa");
+
+  if (!(valor > 0) || contaAtual === null) {
+    previa.textContent = "Digite um valor para ver quanto entra no saldo.";
+    return;
+  }
+  const taxa = valor * contaAtual.pix_taxa;
+  previa.textContent = "Taxa de " + formatoReais.format(taxa) + ". Entram no saldo " + formatoReais.format(valor - taxa) + ".";
+}
+
+document.getElementById("pix-valor").addEventListener("input", atualizarPreviaPix);
+
+// envia um formulário da carteira; se der certo, limpa os campos e atualiza a conta
+async function enviarCarteira(formulario, caminho, dados) {
+  const status = formulario.querySelector("div[role=status]");
+  const resposta = await api(caminho, dados);
+
+  if (resposta.conta) {
+    contaAtual = resposta.conta;
+    desenharConta();
+    desenharDetalhes();
+  }
+  if (resposta.ok) {
+    formulario.reset();
+    atualizarPreviaPix();
+  }
+  mostrarStatus(status, resposta.ok, ultimaMensagem(resposta, resposta.ok ? "Feito." : "Não foi possível."));
+}
+
+document.getElementById("form-pix").addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  const valor = document.getElementById("pix-valor").value.trim();
+  const chave = document.getElementById("pix-chave").value.trim();
+  if (valor === "" || chave === "") {
+    mostrarStatus(this.querySelector("div[role=status]"), false, "Preencha o valor e a chave pix.");
+    return;
+  }
+  enviarCarteira(this, "/api/pix", { valor: valor, chave: chave });
+});
+
+document.getElementById("form-gift").addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  const codigo = document.getElementById("gift-codigo").value.trim();
+  if (codigo === "") {
+    mostrarStatus(this.querySelector("div[role=status]"), false, "Digite o código do gift card.");
+    return;
+  }
+  enviarCarteira(this, "/api/giftcard", { codigo: codigo });
+});
+
+document.getElementById("form-cartao").addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  const dados = {
+    numero: document.getElementById("cartao-numero").value.trim(),
+    cvc: document.getElementById("cartao-cvc").value.trim(),
+    validade: document.getElementById("cartao-validade").value.trim(),
+    limite: document.getElementById("cartao-limite").value.trim()
+  };
+  if (dados.numero === "" || dados.cvc === "" || dados.validade === "" || dados.limite === "") {
+    mostrarStatus(this.querySelector("div[role=status]"), false, "Preencha todos os campos do cartão.");
+    return;
+  }
+  enviarCarteira(this, "/api/cartoes", dados);
+});
 
 
 // ===== Início =====

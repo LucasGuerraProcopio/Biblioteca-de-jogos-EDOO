@@ -177,7 +177,13 @@
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-4">
+          <!-- abas da conta -->
+          <div role="tablist" aria-label="Partes da conta" class="flex gap-1 border-b border-borda">
+            <button type="button" role="tab" id="aba-biblioteca" data-aba-conta="biblioteca" aria-selected="true" class="min-h-11 px-4 -mb-px border-b-2 border-transparent text-suave aria-selected:border-destaque aria-selected:text-texto aria-selected:font-semibold">Biblioteca</button>
+            <button type="button" role="tab" id="aba-carteira" data-aba-conta="carteira" aria-selected="false" class="min-h-11 px-4 -mb-px border-b-2 border-transparent text-suave aria-selected:border-destaque aria-selected:text-texto aria-selected:font-semibold">Carteira</button>
+          </div>
+
+          <div id="conteudo-biblioteca" class="flex flex-wrap gap-4">
             <div class="flex-[999_1_480px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto">
               <h2 class="px-4 pt-3.5 pb-1.5 text-[17px] font-semibold">Biblioteca</h2>
               <table class="w-full border-collapse">
@@ -197,6 +203,79 @@
 
             <!-- ações do jogo selecionado (preenchido pelo app.js) -->
             <aside id="biblioteca-detalhes" aria-label="Jogo selecionado" class="flex-[1_1_260px] max-w-[340px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-4"></aside>
+          </div>
+
+          <!-- carteira: pix, gift card e cartões -->
+          <div id="conteudo-carteira" class="flex flex-col gap-4" hidden>
+            <div class="flex flex-wrap gap-4">
+              <div class="flex-[1_1_340px] min-w-0 flex flex-col gap-4">
+
+                <form id="form-pix" class="rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5" novalidate>
+                  <h2 class="text-lg font-semibold">Depositar via pix</h2>
+                  <div class="px-3.5 py-3 rounded-md bg-fundo border border-borda flex flex-col gap-1">
+                    <span id="pix-info" class="text-[13px] text-suave"></span>
+                    <span id="pix-chave-loja" class="font-mono break-all"></span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                      <label for="pix-valor" class="text-[#C9D1DB] font-medium">Valor (R$)<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                      <input id="pix-valor" type="text" inputmode="decimal" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label for="pix-chave" class="text-[#C9D1DB] font-medium">Chave pix<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                      <input id="pix-chave" type="text" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque">
+                    </div>
+                  </div>
+                  <p id="pix-previa" class="text-suave">Digite um valor para ver quanto entra no saldo.</p>
+                  <button type="submit" class="min-h-11 rounded-md bg-destaque text-white font-semibold hover:brightness-110">Depositar</button>
+                  <div role="status" hidden></div>
+                </form>
+
+                <form id="form-gift" class="rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5" novalidate>
+                  <h2 class="text-lg font-semibold">Resgatar gift card</h2>
+                  <div class="flex flex-col gap-1.5">
+                    <label for="gift-codigo" class="text-[#C9D1DB] font-medium">Código do gift card<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                    <div class="flex gap-2">
+                      <input id="gift-codigo" type="text" required aria-required="true" autocomplete="off" class="flex-1 min-w-0 min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                      <button type="submit" class="min-h-11 px-[18px] rounded-md bg-destaque text-white font-semibold hover:brightness-110">Resgatar</button>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-suave">O valor vai direto para o saldo. Cada código só pode ser usado uma vez.</p>
+                  <div role="status" hidden></div>
+                </form>
+              </div>
+
+              <section aria-label="Cartões de crédito" class="flex-[1_1_340px] min-w-0 rounded-lg bg-painel border border-borda p-5 flex flex-col gap-3.5">
+                <h2 class="text-lg font-semibold">Cartões de crédito</h2>
+                <div id="lista-cartoes" class="flex flex-col gap-3"></div>
+
+                <form id="form-cartao" class="border-t border-linha pt-3.5 flex flex-col gap-3" novalidate>
+                  <h3 class="text-base font-semibold">Cadastrar cartão</h3>
+                  <div class="flex flex-col gap-1.5">
+                    <label for="cartao-numero" class="text-[#C9D1DB] font-medium">Número do cartão<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                    <input id="cartao-numero" type="text" inputmode="numeric" autocomplete="off" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                  </div>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                      <label for="cartao-cvc" class="text-[#C9D1DB] font-medium">CVC<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                      <input id="cartao-cvc" type="text" inputmode="numeric" autocomplete="off" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label for="cartao-validade" class="text-[#C9D1DB] font-medium">Validade<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                      <input id="cartao-validade" type="text" placeholder="MM/AA" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <label for="cartao-limite" class="text-[#C9D1DB] font-medium">Limite (R$)<span aria-hidden="true" class="text-[#FF6B6B] ml-1">*</span></label>
+                      <input id="cartao-limite" type="text" inputmode="decimal" required aria-required="true" class="min-h-11 px-3 rounded-md bg-fundo border border-borda outline-none focus:border-destaque font-mono">
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-suave">Por segurança, só os 4 últimos dígitos ficam salvos e o CVC não é guardado.</p>
+                  <button type="submit" class="min-h-11 rounded-md border border-borda bg-elevado font-semibold hover:border-suave">Cadastrar cartão</button>
+                  <div role="status" hidden></div>
+                </form>
+              </section>
+            </div>
+            <p class="text-[13px] text-suave"><span class="text-[#FF6B6B]">*</span> Campo obrigatório</p>
           </div>
         </div>
       </section>
