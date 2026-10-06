@@ -12,22 +12,9 @@
 #include "catalogo.hpp"
 #include "usuario.hpp"
 #include "menu.hpp"
+#include "caminho.hpp"
 using namespace std;
 
-
-// devolve a pasta onde o programa está
-string pasta_do_programa(const char* executavel)
-{
-    string caminho = executavel;
-    size_t posicao = caminho.find_last_of("/\\");
-
-    if(posicao == string::npos)
-    {
-        return "";
-    };
-
-    return caminho.substr(0, posicao + 1);
-}
 
 
 int main(int argc, char* argv[])

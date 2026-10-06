@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Biblioteca de Jogos</title>
+  <!-- Tailwind pela internet (versão de desenvolvimento) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="min-h-screen bg-[#0E1116] text-[#E6EAF0] font-sans flex items-center justify-center">
+
+  <main class="w-full max-w-md rounded-xl border border-[#2A3240] bg-[#161B22] p-8 flex flex-col gap-4">
+    <h1 class="text-2xl font-semibold">Biblioteca de Jogos</h1>
+    <p class="text-[#9AA4B2]">Teste de ligação entre a interface e o C++.</p>
+    <div id="resultado" class="rounded-md border border-[#2A3240] bg-[#0E1116] px-4 py-3 font-mono">
+      Consultando o servidor...
+    </div>
+  </main>
+
+  <script>
+    // pede ao C++ o caminho /api/status e mostra a resposta
+    fetch("/api/status")
+      .then(function (resposta) { return resposta.json(); })
+      .then(function (dados) {
+        document.getElementById("resultado").textContent =
+          "Servidor funcionando. Jogos no catálogo: " + dados.jogos;
+      })
+      .catch(function () {
+        document.getElementById("resultado").textContent =
+          "Não foi possível falar com o servidor.";
+      });
+  </script>
+</body>
+</html>
