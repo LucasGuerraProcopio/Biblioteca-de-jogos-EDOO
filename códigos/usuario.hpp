@@ -7,6 +7,7 @@
 #include "metodos_pagamento.hpp"
 #include "catalogo.hpp"
 #include "banco_de_dados.hpp"
+#include "seguranca.hpp"
 using namespace std;
 
 
@@ -23,7 +24,7 @@ class usuario
 
     // login, saldo e métodos auxiliares
     private:
-        string senha_conta;
+        string senha_conta; // guarda o hash da senha, nunca a senha em texto puro
         double saldo = 0;
         vector <cartao_de_credito> cartoes_cadastrados;
 
@@ -41,11 +42,15 @@ class usuario
         };
 
         // coloca o jogo na biblioteca depois do pagamento aprovado
-        void registrar_item(int id_jogo)
+        // guarda como e quanto foi pago, para o reembolso devolver certo
+        void registrar_item(int id_jogo, int forma, double valor, int indice_cartao)
         {
             item_biblioteca novo_item;
             novo_item.id_jogo = id_jogo;
             novo_item.data_compra = time(nullptr);
+            novo_item.forma_pagamento = forma;
+            novo_item.valor_pago = valor;
+            novo_item.cartao_pago = indice_cartao;
             biblioteca.push_back(novo_item);
         };
 
@@ -56,14 +61,14 @@ class usuario
         usuario()
         {
             this->nome_conta = "usuario";
-            this->senha_conta = "";
+            this->senha_conta = gerar_hash("");
         };
 
-        // construtor da conta
+        // construtor da conta, recebe a senha em texto e guarda só o hash
         usuario(string novo_nick, string nova_password)
         {
             this->nome_conta = novo_nick;
-            this->senha_conta = nova_password;
+            this->senha_conta = gerar_hash(nova_password);
         };
 
 
@@ -94,16 +99,17 @@ class usuario
         // senha da conta
         void SetSenha(string nova_senha)
         {
-            this->senha_conta = nova_senha;
+            this->senha_conta = gerar_hash(nova_senha);
             cout << "Sua senha foi alterada com sucesso." << endl;
         };
+        // devolve o hash da senha (é ele que vai para o banco)
         string GetSenha() const
         {
             return senha_conta;
         };
         bool verificar_senha(string tentativa) const
         {
-            return tentativa == senha_conta;
+            return gerar_hash(tentativa) == senha_conta;
         };
 
 
@@ -119,6 +125,19 @@ class usuario
 
 
         // restauram os dados carregados do banco, sem mensagens na tela
+        // recebe a senha como veio do banco, devolve true se era uma senha antiga em texto puro
+        // (nesse caso ela é convertida para hash e a conta precisa ser salva de novo)
+        bool RestaurarSenha(const string& senha_salva)
+        {
+            if(eh_hash(senha_salva) == true)
+            {
+                this->senha_conta = senha_salva;
+                return false;
+            };
+
+            this->senha_conta = gerar_hash(senha_salva);
+            return true;
+        };
         void RestaurarSaldo(double saldo_salvo)
         {
             this->saldo = saldo_salvo;
@@ -222,7 +241,16 @@ class usuario
                 saldo -= jogo.GetPreco();
             };
 
-            registrar_item(jogo.GetId());
+            // forma 1 = saldo, forma 0 = jogo gratuito (não pagou nada)
+            if(jogo.EhPago() == true)
+            {
+                registrar_item(jogo.GetId(), 1, jogo.GetPreco(), -1);
+            }
+            else
+            {
+                registrar_item(jogo.GetId(), 0, 0, -1);
+            };
+
             cout << "O jogo: " << jogo.GetTitulo() << " foi adicionado à sua biblioteca." << endl;
             return true;
         };
@@ -252,7 +280,8 @@ class usuario
                 return false;
             };
 
-            registrar_item(jogo.GetId());
+            // forma 2 = cartão, guarda qual cartão foi usado
+            registrar_item(jogo.GetId(), 2, jogo.GetPreco(), indice_cartao);
             cout << "O jogo: " << jogo.GetTitulo() << " foi adicionado à sua biblioteca." << endl;
             return true;
         };
@@ -296,7 +325,36 @@ class usuario
         };
 
 
-        // reembolso
+        // registra horas jogadas, o jogo precisa estar instalado
+        bool jogar(int id_jogo, int horas)
+        {
+            item_biblioteca* item = buscar_item(id_jogo);
+
+            if(item == nullptr)
+            {
+                cout << "Esse jogo não está na sua biblioteca." << endl;
+                return false;
+            };
+
+            if(item->instalado == false)
+            {
+                cout << "Instale o jogo antes de jogar." << endl;
+                return false;
+            };
+
+            if(horas <= 0)
+            {
+                cout << "Quantidade de horas inválida." << endl;
+                return false;
+            };
+
+            item->horas_jogadas += horas;
+            cout << "Você jogou " << horas << " hora(s). Total no jogo: " << item->horas_jogadas << " horas." << endl;
+            return true;
+        };
+
+
+        // reembolso: devolve o valor que foi pago, no saldo ou no cartão usado na compra
         bool reembolsar(const jogo_base& jogo)
         {
             if(jogo.EhPago() == false)
@@ -309,9 +367,30 @@ class usuario
             {
                 if(biblioteca[i].id_jogo == jogo.GetId())
                 {
+                    item_biblioteca item = biblioteca[i];
+
+                    // compras antigas não guardaram o valor pago, então usa o preço atual
+                    double valor = item.valor_pago;
+                    if(valor <= 0)
+                    {
+                        valor = jogo.GetPreco();
+                    };
+
                     biblioteca.erase(biblioteca.begin() + i);
-                    saldo += jogo.GetPreco();
-                    cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << jogo.GetPreco() << " reais voltaram ao seu saldo." << endl;
+
+                    bool cartao_valido = (item.cartao_pago >= 0 && item.cartao_pago < (int)cartoes_cadastrados.size());
+
+                    if(item.forma_pagamento == 2 && cartao_valido == true)
+                    {
+                        // a compra foi no cartão: o dinheiro volta para o cartão, não para o saldo
+                        cartoes_cadastrados[item.cartao_pago].estornar(valor);
+                        cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << valor << " reais voltaram ao cartão." << endl;
+                    }
+                    else
+                    {
+                        saldo += valor;
+                        cout << "O jogo: " << jogo.GetTitulo() << " foi reembolsado e " << valor << " reais voltaram ao seu saldo." << endl;
+                    };
                     return true;
                 };
             };
@@ -350,7 +429,23 @@ class usuario
                     cout << " | não instalado";
                 };
 
-                cout << " | " << biblioteca[i].horas_jogadas << " horas" << endl;
+                cout << " | " << biblioteca[i].horas_jogadas << " horas";
+
+                // data da compra no formato dd/mm/aaaa
+                if(biblioteca[i].data_compra > 0)
+                {
+                    time_t momento = (time_t)biblioteca[i].data_compra;
+                    struct tm* data = localtime(&momento);
+
+                    if(data != nullptr)
+                    {
+                        char texto_data[20];
+                        strftime(texto_data, sizeof(texto_data), "%d/%m/%Y", data);
+                        cout << " | adquirido em " << texto_data;
+                    };
+                };
+
+                cout << endl;
             };
 
             cout << "Saldo: " << saldo << " reais\n" << endl;
@@ -390,16 +485,31 @@ class repositorio_usuarios
         repositorio_usuarios& operator=(const repositorio_usuarios&) = delete;
 
         // salva a conta, a biblioteca e os cartões no banco
-        void salvar(usuario* conta)
+        // tudo em uma transação: se alguma parte falhar, nada é alterado no banco
+        bool salvar(usuario* conta)
         {
             if(banco == nullptr || conta == nullptr)
             {
-                return;
+                return false;
             };
 
-            banco->salvar_conta(conta->GetId(), conta->Getnome(), conta->GetSenha(), conta->GetSaldo());
-            banco->salvar_biblioteca(conta->GetId(), conta->GetBiblioteca());
-            banco->salvar_cartoes(conta->GetId(), conta->GetCartoes());
+            if(banco->iniciar_transacao() == false)
+            {
+                return false;
+            };
+
+            bool sucesso = banco->salvar_conta(conta->GetId(), conta->Getnome(), conta->GetSenha(), conta->GetSaldo())
+                        && banco->salvar_biblioteca(conta->GetId(), conta->GetBiblioteca())
+                        && banco->salvar_cartoes(conta->GetId(), conta->GetCartoes());
+
+            if(sucesso == true)
+            {
+                return banco->confirmar_transacao();
+            };
+
+            banco->cancelar_transacao();
+            cout << "Os dados da conta " << conta->Getnome() << " não foram salvos." << endl;
+            return false;
         };
 
 
@@ -415,9 +525,12 @@ class repositorio_usuarios
 
             for(size_t i = 0; i < contas_salvas.size(); i++)
             {
-                usuario* conta = new usuario(contas_salvas[i].nome, contas_salvas[i].senha);
+                usuario* conta = new usuario(contas_salvas[i].nome, "");
                 conta->SetId(contas_salvas[i].id);
                 conta->RestaurarSaldo(contas_salvas[i].saldo);
+
+                // senha antiga em texto puro vira hash e a conta é salva de novo
+                bool regravar = conta->RestaurarSenha(contas_salvas[i].senha);
 
                 vector <item_biblioteca> itens = banco->carregar_biblioteca(contas_salvas[i].id);
                 for(size_t j = 0; j < itens.size(); j++)
@@ -429,9 +542,20 @@ class repositorio_usuarios
                 for(size_t j = 0; j < cartoes.size(); j++)
                 {
                     conta->RestaurarCartao(cartoes[j]);
+
+                    // cartão antigo com o número completo: ao salvar de novo ficam só os 4 últimos dígitos
+                    if(cartoes[j].GetNumero().size() > 4)
+                    {
+                        regravar = true;
+                    };
                 };
 
                 contas.push_back(conta);
+
+                if(regravar == true)
+                {
+                    salvar(conta);
+                };
 
                 if(conta->GetId() >= proximo_id)
                 {
@@ -585,7 +709,8 @@ class repositorio_usuarios
                 return false;
             };
 
-            return banco->salvar_gift_card(gift_card(codigo, valor));
+            // inserir_gift_card falha se o código já existir, então nunca substitui um gift card
+            return banco->inserir_gift_card(gift_card(codigo, valor));
         };
 
 

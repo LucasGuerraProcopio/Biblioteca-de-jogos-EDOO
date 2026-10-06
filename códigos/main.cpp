@@ -1,13 +1,51 @@
 #include <iostream>
+#include <string>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 #include "catalogo.hpp"
 #include "usuario.hpp"
 #include "menu.hpp"
 using namespace std;
 
 
-int main()
+// devolve a pasta onde o programa está
+string pasta_do_programa(const char* executavel)
 {
-    banco_de_dados banco("biblioteca.db");
+    string caminho = executavel;
+    size_t posicao = caminho.find_last_of("/\\");
+
+    if(posicao == string::npos)
+    {
+        return "";
+    };
+
+    return caminho.substr(0, posicao + 1);
+}
+
+
+int main(int argc, char* argv[])
+{
+    // deixa o terminal em UTF-8 para mostrar os acentos certos
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    #endif
+
+    // o banco fica na mesma pasta do programa
+    string pasta = "";
+    if(argc > 0)
+    {
+        pasta = pasta_do_programa(argv[0]);
+    };
+
+    banco_de_dados banco(pasta + "biblioteca.db");
 
     if(banco.aberto() == false)
     {

@@ -4,9 +4,7 @@
 using namespace std;
 
 
-// Classe base ABSTRATA de todos os jogos
-// tem funções virtuais puras (= 0), então não pode ser criada direto:
-// só existem jogos gratuitos ou pagos
+// Classe de todos os jogos
 class jogo_base
 {
     // Informações sobre o jogo
@@ -55,7 +53,7 @@ class jogo_base
         // destrutor virtual
         virtual ~jogo_base() {};
 
-        // comparadores pelo tamanho do jogo
+        // comparam pelo tamanho do jogo
         bool operator<(const jogo_base &outro) const
         {
             return tamanho_jogo < outro.tamanho_jogo;
@@ -68,11 +66,11 @@ class jogo_base
 
         bool operator==(const jogo_base &outro) const
         {
-            return tamanho_jogo == outro.tamanho_jogo;
+            return titulo_jogo == outro.titulo_jogo;
         };
 
 
-        // Funções virtuais puras: cada classe filha é obrigada a implementar
+        // Funções virtuais
         virtual double GetPreco() const = 0;
         virtual bool EhPago() const = 0;
 
@@ -168,7 +166,7 @@ class jogo_base
 class jogos_gratuitos : public jogo_base
 {
     public:
-        // construtor: repassa os dados para a classe base
+        // construtor
         jogos_gratuitos(string titulo_jogo_gratuito, double tamanho_jogo_gratuito, string senha_gratuito, string usuario_gratuito = "Player 1") : jogo_base(titulo_jogo_gratuito, tamanho_jogo_gratuito, senha_gratuito, usuario_gratuito)
         {
         };
@@ -230,11 +228,14 @@ class jogos_pagos : public jogo_base
 };
 
 
-// jogos da biblioteca de UM usuario
+// jogos da biblioteca do usuario
 struct item_biblioteca
 {
     int id_jogo = 0;
     bool instalado = false;
     int horas_jogadas = 0;
     long long data_compra = 0;
+    int forma_pagamento = 0;
+    double valor_pago = 0;
+    int cartao_pago = -1;
 };
