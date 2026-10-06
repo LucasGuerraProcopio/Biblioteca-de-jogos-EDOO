@@ -4,31 +4,137 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Biblioteca de Jogos</title>
-  <!-- Tailwind pela internet (versão de desenvolvimento) -->
+
+  <!-- fontes e Tailwind pela internet -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- cores e fontes do projeto: viram classes como bg-fundo, text-suave, border-borda -->
+  <style type="text/tailwindcss">
+    @theme {
+      --color-fundo: #0E1116;
+      --color-lateral: #12161C;
+      --color-painel: #161B22;
+      --color-elevado: #1F2630;
+      --color-borda: #2A3240;
+      --color-linha: #222A35;
+      --color-selecionado: #1B2B44;
+      --color-texto: #E6EAF0;
+      --color-suave: #9AA4B2;
+      --color-destaque: #2F6FE0;
+      --color-link: #7DB0FF;
+      --color-aviso: #F0B45A;
+      --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-[#0E1116] text-[#E6EAF0] font-sans flex items-center justify-center">
+<body class="min-h-screen bg-fundo text-texto font-sans text-[15px]">
+<div class="min-h-screen flex flex-col">
 
-  <main class="w-full max-w-md rounded-xl border border-[#2A3240] bg-[#161B22] p-8 flex flex-col gap-4">
-    <h1 class="text-2xl font-semibold">Biblioteca de Jogos</h1>
-    <p class="text-[#9AA4B2]">Teste de ligação entre a interface e o C++.</p>
-    <div id="resultado" class="rounded-md border border-[#2A3240] bg-[#0E1116] px-4 py-3 font-mono">
-      Consultando o servidor...
+  <!-- barra superior -->
+  <header class="flex flex-wrap items-center justify-between gap-4 px-6 py-3.5 bg-painel border-b border-borda">
+    <div class="flex items-center gap-3">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7DB0FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/></svg>
+      <span class="text-lg font-semibold">Biblioteca de Jogos</span>
     </div>
-  </main>
+    <a href="#conta" class="min-h-11 inline-flex items-center px-5 rounded-md border border-borda bg-elevado font-medium hover:border-suave">Entrar na conta</a>
+  </header>
 
-  <script>
-    // pede ao C++ o caminho /api/status e mostra a resposta
-    fetch("/api/status")
-      .then(function (resposta) { return resposta.json(); })
-      .then(function (dados) {
-        document.getElementById("resultado").textContent =
-          "Servidor funcionando. Jogos no catálogo: " + dados.jogos;
-      })
-      .catch(function () {
-        document.getElementById("resultado").textContent =
-          "Não foi possível falar com o servidor.";
-      });
-  </script>
+  <div class="flex-1 flex flex-wrap">
+
+    <!-- menu lateral: o link da tela aberta recebe aria-current="page" pelo app.js -->
+    <nav aria-label="Seções" class="flex-[1_1_200px] max-w-60 px-3 py-5 bg-lateral border-r border-borda flex flex-col gap-1">
+      <a href="#catalogo" data-tela="catalogo" class="min-h-11 flex items-center gap-2.5 px-3.5 rounded-md text-suave hover:text-texto aria-[current=page]:bg-selecionado aria-[current=page]:text-texto aria-[current=page]:font-medium">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Catálogo
+      </a>
+      <a href="#conta" data-tela="conta" class="min-h-11 flex items-center gap-2.5 px-3.5 rounded-md text-suave hover:text-texto aria-[current=page]:bg-selecionado aria-[current=page]:text-texto aria-[current=page]:font-medium">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        Minha conta
+      </a>
+      <a href="#admin" data-tela="admin" class="min-h-11 flex items-center gap-2.5 px-3.5 rounded-md text-suave hover:text-texto aria-[current=page]:bg-selecionado aria-[current=page]:text-texto aria-[current=page]:font-medium">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        Administração
+      </a>
+    </nav>
+
+    <main class="flex-[999_1_560px] min-w-0 p-6 flex flex-col gap-5">
+
+      <!-- cada tela é uma section; só a da tela atual fica visível -->
+      <section id="tela-catalogo" data-tela="catalogo" class="flex-1 flex flex-col gap-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 class="text-[26px] font-semibold">Catálogo</h1>
+          <div id="catalogo-resumo" class="text-suave"></div>
+        </div>
+
+        <!-- busca e filtro por tipo -->
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="catalogo-busca" class="sr-only">Buscar por título</label>
+          <div class="flex-[1_1_260px] flex items-center gap-2.5 min-h-11 px-3.5 rounded-md bg-painel border border-borda focus-within:border-destaque">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA4B2" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="catalogo-busca" type="search" placeholder="Buscar por título" autocomplete="off" class="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#6E7886]">
+          </div>
+          <div role="group" aria-label="Filtrar por tipo" class="flex gap-1 p-1 rounded-lg bg-painel border border-borda">
+            <button type="button" data-tipo="" aria-pressed="true" class="min-h-9 px-3.5 rounded-md font-medium text-suave aria-pressed:bg-destaque aria-pressed:text-white">Todos</button>
+            <button type="button" data-tipo="gratuitos" aria-pressed="false" class="min-h-9 px-3.5 rounded-md font-medium text-suave aria-pressed:bg-destaque aria-pressed:text-white">Gratuitos</button>
+            <button type="button" data-tipo="pagos" aria-pressed="false" class="min-h-9 px-3.5 rounded-md font-medium text-suave aria-pressed:bg-destaque aria-pressed:text-white">Pagos</button>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-wrap gap-4">
+          <!-- tabela; clicar no nome de uma coluna ordena por ela -->
+          <div class="flex-[999_1_480px] min-w-0 rounded-lg bg-painel border border-borda overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="text-left text-[13px] uppercase tracking-wider text-suave">
+                  <th data-coluna="id" class="w-[72px] px-2 py-1 font-medium border-b border-borda">
+                    <button type="button" data-ordem="id" class="min-h-10 px-2 inline-flex items-center gap-1.5 uppercase tracking-wider">Id <span class="seta" aria-hidden="true"></span></button>
+                  </th>
+                  <th data-coluna="titulo" class="px-2 py-1 font-medium border-b border-borda">
+                    <button type="button" data-ordem="titulo" class="min-h-10 px-2 inline-flex items-center gap-1.5 uppercase tracking-wider">Título <span class="seta" aria-hidden="true"></span></button>
+                  </th>
+                  <th data-coluna="tamanho" class="px-2 py-1 font-medium border-b border-borda text-right">
+                    <button type="button" data-ordem="tamanho" class="min-h-10 px-2 inline-flex items-center gap-1.5 uppercase tracking-wider">Tamanho <span class="seta" aria-hidden="true"></span></button>
+                  </th>
+                  <th class="px-4 py-3 font-medium border-b border-borda">Tipo</th>
+                  <th data-coluna="preco" class="px-2 py-1 font-medium border-b border-borda text-right">
+                    <button type="button" data-ordem="preco" class="min-h-10 px-2 inline-flex items-center gap-1.5 uppercase tracking-wider">Preço <span class="seta" aria-hidden="true"></span></button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="catalogo-linhas"></tbody>
+            </table>
+            <p id="catalogo-vazio" class="py-8 text-center text-suave" hidden>Nenhum jogo encontrado.</p>
+          </div>
+
+          <!-- detalhes do jogo selecionado (preenchido pelo app.js) -->
+          <aside id="catalogo-detalhes" aria-label="Detalhes do jogo" class="flex-[1_1_260px] max-w-[340px] self-start rounded-lg bg-painel border border-borda p-5 flex flex-col gap-4"></aside>
+        </div>
+      </section>
+
+      <section id="tela-conta" data-tela="conta" class="flex-1 flex flex-col gap-4" hidden>
+        <h1 class="text-[26px] font-semibold">Minha conta</h1>
+        <p class="text-suave">O login e a conta entram aqui nos passos 4 a 6.</p>
+      </section>
+
+      <section id="tela-admin" data-tela="admin" class="flex-1 flex flex-col gap-4" hidden>
+        <h1 class="text-[26px] font-semibold">Administração</h1>
+        <p class="text-suave">A administração entra aqui no passo 7.</p>
+      </section>
+
+      <!-- painel de mensagens: mostra o que as classes escreveram no cout -->
+      <section aria-label="Mensagens do sistema" class="rounded-lg bg-[#0A0D11] border border-borda px-4 py-3 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[13px] uppercase tracking-wider text-suave">Mensagens</span>
+          <button type="button" id="limpar-mensagens" class="text-[13px] text-suave hover:text-texto">Limpar</button>
+        </div>
+        <div id="mensagens" aria-live="polite" class="flex flex-col gap-1 font-mono text-sm text-[#C9D1DB]"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
