@@ -501,7 +501,18 @@ inline void conta_reembolsar(usuario& conta, catalogo& loja)
     conta.reembolsar(*jogo);
 }
  
- 
+// resgata um gift card e o valor vai para o saldo
+inline void conta_resgatar_gift_card(usuario& conta, repositorio_usuarios& usuarios)
+{
+    string codigo = ler_texto("Código do gift card: ");
+    if(codigo.size() == 0)
+    {
+        return;
+    };
+
+    usuarios.resgatar_gift_card(&conta, codigo);
+}
+
 // menu da conta logada
 inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& usuarios)
 {
@@ -517,6 +528,7 @@ inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& 
         cout << "5 - Instalar jogo" << endl;
         cout << "6 - Desinstalar jogo" << endl;
         cout << "7 - Reembolsar jogo" << endl;
+        cout << "8 - Resgatar gift card" << endl;
         cout << "0 - Sair da conta" << endl;
  
         opcao = ler_inteiro("Escolha: ");
@@ -543,6 +555,9 @@ inline void menu_da_conta(usuario* conta, catalogo& loja, repositorio_usuarios& 
                 break;
             case 7:
                 conta_reembolsar(*conta, loja);
+                break;
+            case 8:
+                conta_resgatar_gift_card(*conta, usuarios);
                 break;
             case 0:
                 cout << "Saindo da conta..." << endl;
@@ -590,6 +605,29 @@ inline void entrar_na_conta(catalogo& loja, repositorio_usuarios& usuarios)
     menu_da_conta(conta, loja, usuarios);
 }
 
+// cria um gift card que depois pode ser resgatado em qualquer conta
+inline void criar_gift_card(repositorio_usuarios& usuarios)
+{
+    cout << "\n--- Criar gift card ---" << endl;
+
+    string codigo = ler_texto("Código do gift card: ");
+    if(codigo.size() == 0)
+    {
+        return;
+    };
+
+    double valor = ler_positivo("Valor em reais: ");
+    if(valor == 0)
+    {
+        return;
+    };
+
+    if(usuarios.criar_gift_card(codigo, valor) == true)
+    {
+        cout << "Gift card " << codigo << " criado com valor de " << valor << " reais." << endl;
+    };
+}
+
 // menu principal
 inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
 {
@@ -608,6 +646,7 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
         cout << "8 - Atualizar jogo" << endl;
         cout << "9 - Buscar jogo" << endl;
         cout << "10 - Entrar na conta" << endl;
+        cout << "11 - Criar gift card" << endl;
         cout << "0 - Sair" << endl;
 
         opcao = ler_inteiro("Escolha: ");
@@ -643,6 +682,9 @@ inline void executar_menu(catalogo& loja, repositorio_usuarios& usuarios)
                 break;
             case 10:
                 entrar_na_conta(loja, usuarios);
+                break;
+            case 11:
+                criar_gift_card(usuarios);
                 break;
             case 0:
                 cout << "Saindo..." << endl;

@@ -570,7 +570,51 @@ class repositorio_usuarios
             return loja.remover(id_jogo);
         };
 
+        // cria um gift card novo, recusa se o código já existir
+        bool criar_gift_card(const string& codigo, double valor)
+        {
+            if(banco == nullptr)
+            {
+                return false;
+            };
 
+            gift_card existente;
+            if(banco->buscar_gift_card(codigo, existente) == true)
+            {
+                cout << "Já existe um gift card com o código: " << codigo << endl;
+                return false;
+            };
+
+            return banco->salvar_gift_card(gift_card(codigo, valor));
+        };
+
+
+        // resgata o gift card na conta e salva os dois no banco
+        void resgatar_gift_card(usuario* conta, const string& codigo)
+        {
+            if(banco == nullptr || conta == nullptr)
+            {
+                return;
+            };
+
+            gift_card card;
+            if(banco->buscar_gift_card(codigo, card) == false)
+            {
+                cout << "Código de gift card inválido." << endl;
+                return;
+            };
+
+            bool estava_valido = card.EstaValido();
+            conta->Cadastrar_GiftCard(card, codigo);
+
+            // se o cartão foi usado agora, marca como usado no banco e salva o novo saldo
+            if(estava_valido == true && card.EstaValido() == false)
+            {
+                banco->salvar_gift_card(card);
+                salvar(conta);
+            };
+        };
+        
         // Lista as contas
         void listar() const
         {

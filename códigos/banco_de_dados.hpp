@@ -127,6 +127,11 @@ class banco_de_dados
                      "validade TEXT NOT NULL, "
                      "limite REAL NOT NULL, "
                      "gastos REAL NOT NULL DEFAULT 0)");
+
+            executar("CREATE TABLE IF NOT EXISTS gift_cards ("
+                     "codigo TEXT PRIMARY KEY, "
+                     "valor REAL NOT NULL, "
+                     "valido INTEGER NOT NULL DEFAULT 1)");
         };
 
         ~banco_de_dados()
@@ -521,6 +526,54 @@ class banco_de_dados
             return cartoes;
         };
 
+        // cria o gift card no banco ou atualiza se ele já existir (INSERT OR REPLACE)
+        bool salvar_gift_card(const gift_card& card)
+        {
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "INSERT OR REPLACE INTO gift_cards (codigo, valor, valido) VALUES (?, ?, ?)", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_text(comando, 1, card.GetCodigo().c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_double(comando, 2, card.GetValor());
+            sqlite3_bind_int(comando, 3, card.EstaValido() ? 1 : 0);
+
+            bool sucesso = (sqlite3_step(comando) == SQLITE_DONE);
+            sqlite3_finalize(comando);
+            return sucesso;
+        };
+
+
+        // procura o gift card pelo código e coloca os dados em "encontrado"
+        // devolve false se o código não existir
+        bool buscar_gift_card(const string& codigo, gift_card& encontrado)
+        {
+            sqlite3_stmt* comando = nullptr;
+            if(sqlite3_prepare_v2(conexao, "SELECT valor, valido FROM gift_cards WHERE codigo = ?", -1, &comando, nullptr) != SQLITE_OK)
+            {
+                cout << "Erro no banco de dados: " << sqlite3_errmsg(conexao) << endl;
+                return false;
+            };
+
+            sqlite3_bind_text(comando, 1, codigo.c_str(), -1, SQLITE_TRANSIENT);
+
+            bool achou = false;
+            if(sqlite3_step(comando) == SQLITE_ROW)
+            {
+                encontrado = gift_card(codigo, sqlite3_column_double(comando, 0));
+
+                if(sqlite3_column_int(comando, 1) == 0)
+                {
+                    encontrado.GiftCardRegistrado();
+                };
+                achou = true;
+            };
+
+            sqlite3_finalize(comando);
+            return achou;
+        };
 
         // apaga a conta, a biblioteca e os cartões dela
         bool remover_conta(int id_conta)
