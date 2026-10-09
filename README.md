@@ -53,37 +53,97 @@ A interface tem 5 telas: catálogo (com busca, filtro e ordenação), entrar/cri
 | `sqlite3.c` e `sqlite3.h` | biblioteca SQLite |
 | `httplib.h` | biblioteca cpp-httplib (servidor local) |
 
-## Como compilar e executar
-Precisa do compilador `g++` (MinGW no Windows; no macOS, as ferramentas do Xcode: `xcode-select --install`). Todos os comandos são rodados na **pasta raiz do projeto**.
+## Como rodar o projeto
 
-O `sqlite3.c` precisa ser compilado com `gcc` (não `g++`), e só uma vez:
+O projeto tem dois programas, e você pode usar qualquer um deles:
+- **Interface gráfica** (`servidor.cpp`): abre no navegador. É a forma recomendada.
+- **Menu no terminal** (`main.cpp`): a versão em texto, com as mesmas funções.
+
+Os dois usam as mesmas classes e o mesmo banco de dados (`biblioteca.db`).
+
+### 1. Pré-requisitos
+Você precisa do compilador **g++**. Para conferir se ele está instalado, abra um terminal e digite `g++ --version`.
+
+| Sistema | Como instalar o g++ |
+|---|---|
+| Windows | Instale o MinGW-w64 (por exemplo, pelo [MSYS2](https://www.msys2.org)) e adicione a pasta `bin` dele ao PATH |
+| Linux (Ubuntu/Debian) | `sudo apt install g++` |
+| macOS | `xcode-select --install` |
+
+Não é preciso instalar mais nada: o SQLite e o cpp-httplib já estão na pasta `códigos`. A interface só precisa de internet no navegador, para carregar o Tailwind e as fontes.
+
+### 2. Baixar o projeto
+```
+git clone https://github.com/LucasGuerraProcopio/Biblioteca-de-jogos-EDOO.git
+cd Biblioteca-de-jogos-EDOO
+```
+Ou baixe pelo botão **Code → Download ZIP** do GitHub e extraia.
+
+**Todos os comandos abaixo são rodados na pasta raiz do projeto** (a que tem o `README.md`), não dentro de `códigos`.
+
+### 3. Compilar o SQLite (só na primeira vez)
 ```
 gcc -c códigos/sqlite3.c -o sqlite3.o
 ```
+Pode levar cerca de um minuto. Ele gera o arquivo `sqlite3.o`, usado pelos dois programas. Só é preciso repetir se esse arquivo for apagado.
 
-### Menu no terminal
-| Sistema | Compilar | Executar |
-|---|---|---|
-| Windows (PowerShell) | `g++ -std=c++11 códigos/main.cpp sqlite3.o -o jogos.exe` | `.\jogos.exe` |
-| Linux | `g++ -std=c++11 códigos/main.cpp sqlite3.o -ldl -lpthread -o jogos` | `./jogos` |
-| macOS | `g++ -std=c++11 códigos/main.cpp sqlite3.o -o jogos` | `./jogos` |
+### 4. Rodar a interface gráfica
 
-### Interface gráfica
-| Sistema | Compilar | Executar |
-|---|---|---|
-| Windows (PowerShell) | `g++ -std=c++11 -D_WIN32_WINNT=0x0A00 códigos/servidor.cpp sqlite3.o -lws2_32 -o servidor.exe` | `.\servidor.exe` |
-| Linux | `g++ -std=c++11 códigos/servidor.cpp sqlite3.o -ldl -lpthread -o servidor` | `./servidor` |
-| macOS | `g++ -std=c++11 códigos/servidor.cpp sqlite3.o -o servidor` | `./servidor` |
+**Windows (PowerShell):**
+```
+g++ -std=c++11 -D_WIN32_WINNT=0x0A00 códigos/servidor.cpp sqlite3.o -lws2_32 -o servidor.exe
+.\servidor.exe
+```
 
-Depois de executar, abra **http://localhost:8080** no navegador. Para encerrar o servidor, aperte `Ctrl + C` no terminal.
+**Linux:**
+```
+g++ -std=c++11 códigos/servidor.cpp sqlite3.o -ldl -lpthread -o servidor
+./servidor
+```
 
-### Observações
-- O arquivo `biblioteca.db` é criado ao lado do programa na primeira execução, e os jogos iniciais são cadastrados automaticamente.
-- **Não use o menu e a interface ao mesmo tempo:** os dois leem o banco ao abrir, e um não fica sabendo das mudanças do outro.
-- A interface carrega o Tailwind e as fontes pela internet, então o navegador precisa de conexão.
-- Se aparecer "Não foi possível usar a porta 8080", já existe outro servidor aberto: feche-o antes.
-- No Windows 11, o **Controle Inteligente de Aplicativos** pode bloquear o executável recém-compilado ("Uma política de Controle de Aplicativo bloqueou este arquivo"). Compilar de novo, ou com outro nome (`-o servidor2.exe`), costuma resolver.
+**macOS:**
+```
+g++ -std=c++11 códigos/servidor.cpp sqlite3.o -o servidor
+./servidor
+```
 
+Quando aparecer `Interface disponível em http://localhost:8080`, abra esse endereço no navegador. **Deixe o terminal aberto** enquanto usa a interface. Para encerrar, aperte `Ctrl + C` no terminal.
+
+### 5. Ou rodar o menu no terminal
+
+**Windows (PowerShell):**
+```
+g++ -std=c++11 códigos/main.cpp sqlite3.o -o jogos.exe
+.\jogos.exe
+```
+
+**Linux:**
+```
+g++ -std=c++11 códigos/main.cpp sqlite3.o -ldl -lpthread -o jogos
+./jogos
+```
+
+**macOS:**
+```
+g++ -std=c++11 códigos/main.cpp sqlite3.o -o jogos
+./jogos
+```
+
+Para sair do menu, escolha a opção `0`.
+
+### Na primeira execução
+O arquivo `biblioteca.db` é criado ao lado do programa, já com 9 jogos no catálogo. Para começar do zero, feche o programa e apague esse arquivo.
+
+### Problemas comuns
+| Mensagem | O que fazer |
+|---|---|
+| `Não foi possível usar a porta 8080. Já existe outro servidor rodando?` | Já existe um servidor aberto. Feche-o com `Ctrl + C` no terminal dele (no Windows também funciona `taskkill /IM servidor.exe /F`) |
+| `Uma política de Controle de Aplicativo bloqueou este arquivo` (Windows 11) | É o Controle Inteligente de Aplicativos do Windows. Compile de novo ou com outro nome (`-o servidor2.exe`) |
+| `O servidor não conhece /api/...` (na tela) | Um servidor antigo continua aberto. Feche-o, compile de novo e recarregue a página com `Ctrl + F5` |
+| A página abre sem cores ou fontes | O navegador está sem internet para carregar o Tailwind e as fontes |
+| `g++` não é reconhecido | O compilador não está instalado ou não está no PATH (veja os pré-requisitos) |
+
+**Não use o menu e a interface ao mesmo tempo:** os dois leem o banco ao abrir, e um não fica sabendo das mudanças do outro.
 ## Como usar
 
 ### Interface gráfica
