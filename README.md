@@ -1,6 +1,11 @@
 # Biblioteca de jogos - EDOO
 Nosso projeto consiste em uma biblioteca de jogos, a qual tem a finalidade de usar os recursos de POO na linguagem C++, com o intuito de prática e aplicação de todos os recursos aprendidos na disciplina de Estrutura de Dados Orientadas a Objetos.
 
+## Links
+- **Página do projeto:** https://eduardocabralc.github.io/Biblioteca-de-jogos-EDOO/
+- **Relatório:** https://docs.google.com/document/d/155nPhsg_1HYiUZVrVKoJJHyHeAGps_Ysftw3Tc3uGyQ/edit?tab=t.0
+- **Vídeo de apresentação:** https://youtu.be/YxQ9Q3tSc74
+
 ### Integrantes do Grupo:
 - Eduardo Cabral Cordeiro dos Santos
 - Gabriel Costa Romeiro dos Santos
