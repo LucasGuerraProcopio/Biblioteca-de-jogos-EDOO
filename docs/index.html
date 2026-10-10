@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Biblioteca de Jogos · Projeto de POO em C++</title>
+  <meta name="description" content="Sistema de loja e biblioteca de jogos em C++ com orientação a objetos, banco SQLite, menu no terminal e interface no navegador.">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- as mesmas cores da interface do programa -->
+  <style type="text/tailwindcss">
+    @theme {
+      --color-fundo: #0E1116;
+      --color-lateral: #12161C;
+      --color-painel: #161B22;
+      --color-elevado: #1F2630;
+      --color-borda: #2A3240;
+      --color-linha: #222A35;
+      --color-texto: #E6EAF0;
+      --color-suave: #9AA4B2;
+      --color-destaque: #2F6FE0;
+      --color-link: #7DB0FF;
+      --color-aviso: #F0B45A;
+      --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    html { scroll-behavior: smooth; }
+    section[id] { scroll-margin-top: 7rem; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    :focus-visible { outline: 2px solid var(--color-link); outline-offset: 3px; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-fundo text-texto font-sans text-[17px] leading-relaxed">
+
+  <!-- topo -->
+  <header class="sticky top-0 z-10 bg-fundo/90 backdrop-blur border-b border-linha">
+    <div class="max-w-6xl mx-auto px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+      <a href="#inicio" class="flex items-center gap-2.5 font-semibold">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7DB0FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/></svg>
+        Biblioteca de Jogos
+      </a>
+      <nav aria-label="Seções da página" class="flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-suave">
+        <a href="#video" class="hover:text-texto">Vídeo</a>
+        <a href="#telas" class="hover:text-texto">Telas</a>
+        <a href="#arquitetura" class="hover:text-texto">Como funciona</a>
+        <a href="#poo" class="hover:text-texto">POO no código</a>
+        <a href="#rodar" class="hover:text-texto">Como rodar</a>
+        <a href="#equipe" class="hover:text-texto">Equipe</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- abertura: o próprio programa é a imagem principal -->
+    <section id="inicio" class="max-w-6xl mx-auto px-5 pt-16 md:pt-24">
+      <div class="max-w-[46rem]">
+        <p class="text-suave mb-4">Projeto da disciplina Estruturas de Dados Orientadas a Objetos, CIn UFPE, 2026.2</p>
+        <h1 class="text-[clamp(2.4rem,6vw,4.2rem)] font-semibold leading-[1.05] tracking-[-0.02em]">Biblioteca de Jogos</h1>
+        <p class="mt-6 text-xl text-[#C9D1DB] leading-relaxed">
+          Uma loja e biblioteca de jogos escrita em C++ para praticar orientação a objetos.
+          Dá para navegar pelo catálogo, criar uma conta, colocar dinheiro na carteira, comprar,
+          instalar, jogar e pedir reembolso. Tudo fica salvo em um banco SQLite.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="https://github.com/LucasGuerraProcopio/Biblioteca-de-jogos-EDOO" class="min-h-12 inline-flex items-center gap-2.5 px-6 rounded-md bg-destaque text-white font-semibold hover:brightness-110">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+            Ver o código no GitHub
+          </a>
+          <a href="#video" class="min-h-12 inline-flex items-center px-6 rounded-md border border-borda bg-elevado font-semibold hover:border-suave">Assistir ao vídeo</a>
+        </div>
+      </div>
+
+      <figure class="mt-14 md:mt-16">
+        <div class="rounded-xl border border-borda bg-painel overflow-hidden shadow-[0_30px_80px_-30px_rgba(47,111,224,0.35)]">
+          <div class="flex items-center gap-2 px-4 py-2.5 border-b border-borda bg-lateral" aria-hidden="true">
+            <span class="w-3 h-3 rounded-full bg-[#3A4250]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#3A4250]"></span>
+            <span class="w-3 h-3 rounded-full bg-[#3A4250]"></span>
+            <span class="ml-3 px-3 py-0.5 rounded bg-fundo text-[13px] text-suave font-mono">localhost:8080</span>
+          </div>
+          <img src="imagens/catalogo.png" width="2160" height="1350" alt="Tela do catálogo: tabela com os jogos ordenados por preço e o painel de compra do FC 26, com opção de pagar com saldo ou cartão." class="block w-full h-auto">
+        </div>
+        <figcaption class="mt-3 text-[15px] text-suave">O catálogo na interface gráfica: busca, filtro, ordenação pelas colunas e compra com saldo ou cartão.</figcaption>
+      </figure>
+    </section>
+
+    <!-- vídeo -->
+    <section id="video" class="max-w-6xl mx-auto px-5 pt-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">Apresentação em vídeo</h2>
+      <p class="mt-3 max-w-[42rem] text-suave">Em até 8 minutos: o sistema funcionando e as partes do código que usam os conceitos de orientação a objetos.</p>
+
+      <!--
+        Quando o vídeo estiver no YouTube, troque o <div> abaixo por:
+        <iframe class="w-full aspect-video rounded-xl border border-borda" src="https://www.youtube.com/embed/ID_DO_VIDEO" title="Apresentação do projeto Biblioteca de Jogos" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        (ID_DO_VIDEO é o código que aparece depois de "v=" no link do vídeo)
+      -->
+      <div class="mt-8 w-full aspect-video rounded-xl border border-dashed border-borda bg-painel flex items-center justify-center text-center px-6">
+        <p class="text-suave">O vídeo da apresentação vai aparecer aqui.</p>
+      </div>
+    </section>
+
+    <!-- telas -->
+    <section id="telas" class="max-w-6xl mx-auto px-5 pt-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">O que dá para fazer</h2>
+      <p class="mt-3 max-w-[42rem] text-suave">As mesmas funções existem no menu do terminal e na interface do navegador. Os dois usam as mesmas classes e o mesmo banco de dados.</p>
+
+      <div class="mt-12 flex flex-col gap-16">
+        <article class="grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-8 items-center">
+          <div>
+            <h3 class="text-2xl font-semibold">Minha conta e biblioteca</h3>
+            <p class="mt-3 text-[#C9D1DB]">Cada conta tem saldo, cartões e uma biblioteca com os jogos que adquiriu. Na biblioteca dá para instalar, desinstalar, registrar horas jogadas e pedir reembolso.</p>
+            <p class="mt-3 text-[#C9D1DB]">O reembolso segue regras: até 14 dias depois da compra e com menos de 2 horas jogadas. O dinheiro volta para onde saiu, saldo ou cartão.</p>
+          </div>
+          <img src="imagens/conta.png" width="2160" height="1350" loading="lazy" alt="Tela Minha conta: saldo de 254 reais, 4 jogos e 17 horas jogadas, a tabela da biblioteca e as ações do jogo selecionado." class="w-full h-auto rounded-lg border border-borda">
+        </article>
+
+        <article class="grid md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-8 items-center">
+          <img src="imagens/carteira.png" width="2160" height="1350" loading="lazy" alt="Tela Carteira: depósito via pix com prévia da taxa, resgate de gift card e lista de cartões de crédito com o limite usado." class="w-full h-auto rounded-lg border border-borda md:order-none order-last">
+          <div>
+            <h3 class="text-2xl font-semibold">Carteira</h3>
+            <p class="mt-3 text-[#C9D1DB]">O saldo entra por depósito via pix, com taxa de 2%, ou por gift card, que só pode ser resgatado uma vez.</p>
+            <p class="mt-3 text-[#C9D1DB]">Cartões de crédito têm limite, e por segurança só os 4 últimos dígitos são guardados. O CVC nunca é salvo, e as senhas das contas são guardadas com hash.</p>
+          </div>
+        </article>
+
+        <article class="grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-8 items-center">
+          <div>
+            <h3 class="text-2xl font-semibold">Administração</h3>
+            <p class="mt-3 text-[#C9D1DB]">CRUD completo dos jogos: cadastrar, listar, editar e remover. Um jogo que está na biblioteca de alguma conta não pode ser removido.</p>
+            <p class="mt-3 text-[#C9D1DB]">Também é por aqui que se criam gift cards e se removem contas, sempre com a senha da conta.</p>
+          </div>
+          <img src="imagens/admin.png" width="2160" height="1350" loading="lazy" alt="Tela Administração: tabela de jogos com a coluna Em bibliotecas e o formulário de edição do Minecraft." class="w-full h-auto rounded-lg border border-borda">
+        </article>
+
+        <article class="grid md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-8 items-center">
+          <img src="imagens/login.png" width="2160" height="1350" loading="lazy" alt="Tela de acesso com as abas Entrar e Criar conta e os campos obrigatórios marcados." class="w-full h-auto rounded-lg border border-borda md:order-none order-last">
+          <div>
+            <h3 class="text-2xl font-semibold">Contas</h3>
+            <p class="mt-3 text-[#C9D1DB]">Criar conta e entrar com nome e senha. Nome ou senha errados recebem a mesma mensagem, para não revelar quais contas existem.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- arquitetura -->
+    <section id="arquitetura" class="max-w-6xl mx-auto px-5 pt-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">Como funciona por dentro</h2>
+      <p class="mt-3 max-w-[42rem] text-suave">Toda a lógica fica nas classes em C++. A interface do navegador só mostra os dados e envia os pedidos.</p>
+
+      <ol class="mt-10 grid gap-3 md:grid-cols-4">
+        <li class="rounded-lg border border-borda bg-painel p-5">
+          <h3 class="font-semibold">Navegador</h3>
+          <p class="mt-2 text-[15px] text-suave">HTML, Tailwind e JavaScript. Mostra as telas e chama a API.</p>
+        </li>
+        <li class="rounded-lg border border-borda bg-painel p-5">
+          <h3 class="font-semibold">Servidor local</h3>
+          <p class="mt-2 text-[15px] text-suave"><code class="font-mono text-[14px] text-link">servidor.cpp</code> com cpp-httplib. Recebe pedidos como <code class="font-mono text-[14px] text-link">/api/comprar</code> e responde em JSON.</p>
+        </li>
+        <li class="rounded-lg border border-destaque bg-[#13233B] p-5">
+          <h3 class="font-semibold">Classes em C++</h3>
+          <p class="mt-2 text-[15px] text-[#C9D1DB]">Catálogo, contas, pagamentos e regras. As mesmas usadas pelo menu do terminal.</p>
+        </li>
+        <li class="rounded-lg border border-borda bg-painel p-5">
+          <h3 class="font-semibold">Banco SQLite</h3>
+          <p class="mt-2 text-[15px] text-suave"><code class="font-mono text-[14px] text-link">biblioteca.db</code> guarda jogos, contas, bibliotecas, cartões e gift cards.</p>
+        </li>
+      </ol>
+
+      <p class="mt-6 max-w-[42rem] text-[#C9D1DB]">As mensagens que as classes escrevem com <code class="font-mono text-[15px] text-link">cout</code> aparecem no painel "Mensagens" da tela. Isso é feito pela classe <code class="font-mono text-[15px] text-link">captura_cout</code>, sem mudar nenhuma das outras classes.</p>
+    </section>
+
+    <!-- POO -->
+    <section id="poo" class="max-w-6xl mx-auto px-5 pt-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">Orientação a objetos no código</h2>
+      <p class="mt-3 max-w-[42rem] text-suave">Onde cada conceito da disciplina aparece no projeto.</p>
+
+      <div class="mt-8 rounded-lg border border-borda overflow-x-auto">
+        <table class="w-full border-collapse text-[16px]">
+          <thead>
+            <tr class="text-left bg-painel">
+              <th scope="col" class="px-5 py-3 font-semibold border-b border-borda w-[22%]">Conceito</th>
+              <th scope="col" class="px-5 py-3 font-semibold border-b border-borda">Como aparece</th>
+            </tr>
+          </thead>
+          <tbody class="[&_td]:px-5 [&_td]:py-3.5 [&_td]:border-b [&_td]:border-linha [&_td]:align-top [&_code]:font-mono [&_code]:text-[14px] [&_code]:text-link">
+            <tr><td class="font-medium">Classe abstrata</td><td><code>jogo_base</code> tem <code>GetPreco()</code> e <code>EhPago()</code> como funções virtuais puras, então não existe um "jogo genérico".</td></tr>
+            <tr><td class="font-medium">Herança</td><td><code>jogos_gratuitos</code> e <code>jogos_pagos</code> herdam de <code>jogo_base</code>. <code>pagamento_saldo</code> e <code>pagamento_cartao</code> herdam de <code>forma_de_pagamento</code>.</td></tr>
+            <tr><td class="font-medium">Polimorfismo</td><td>O catálogo guarda tudo como <code>jogo_base*</code>, e cada chamada de <code>GetPreco()</code> executa a versão da classe real. Os métodos sobrescritos usam <code>override</code>.</td></tr>
+            <tr><td class="font-medium">Encapsulamento</td><td>Atributos <code>private</code> e <code>protected</code>, acessados por getters e setters. A senha nunca sai da classe: só é conferida com <code>verificar_senha()</code>.</td></tr>
+            <tr><td class="font-medium">Sobrecarga de operadores</td><td><code>&lt;</code>, <code>&gt;</code> e <code>==</code> em <code>jogo_base</code>. O <code>&lt;</code> ordena o catálogo por tamanho.</td></tr>
+            <tr><td class="font-medium">Padrão Strategy</td><td><code>forma_de_pagamento</code> define como pagar e estornar. A compra não sabe se o dinheiro sai do saldo ou do cartão.</td></tr>
+            <tr><td class="font-medium">Padrão Repository</td><td><code>catalogo</code> e <code>repositorio_usuarios</code> concentram a busca, o cadastro e o salvamento dos objetos no banco.</td></tr>
+            <tr><td class="font-medium">Memória e RAII</td><td>Destrutores liberam os ponteiros, e a cópia é proibida com <code>= delete</code> para evitar <em>double free</em>. <code>captura_cout</code> desvia o <code>cout</code> no construtor e devolve no destrutor.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- como rodar -->
+    <section id="rodar" class="max-w-6xl mx-auto px-5 pt-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">Rodar no seu computador</h2>
+      <p class="mt-3 max-w-[42rem] text-suave">Funciona em Windows, Linux e macOS. Só é preciso o compilador <code class="font-mono text-[15px] text-link">g++</code>: o SQLite e o cpp-httplib já vêm no projeto.</p>
+
+      <ol class="mt-8 flex flex-col gap-6 max-w-[48rem]">
+        <li class="grid grid-cols-[2.25rem_1fr] gap-3">
+          <span class="w-9 h-9 rounded-full border border-borda flex items-center justify-center font-mono text-[15px] text-suave" aria-hidden="true">1</span>
+          <div class="min-w-0">
+            <p>Baixe o projeto e entre na pasta.</p>
+            <pre class="mt-2 px-4 py-3 rounded-md bg-painel border border-borda overflow-x-auto font-mono text-[14px]"><code>git clone https://github.com/LucasGuerraProcopio/Biblioteca-de-jogos-EDOO.git
+cd Biblioteca-de-jogos-EDOO</code></pre>
+          </div>
+        </li>
+        <li class="grid grid-cols-[2.25rem_1fr] gap-3">
+          <span class="w-9 h-9 rounded-full border border-borda flex items-center justify-center font-mono text-[15px] text-suave" aria-hidden="true">2</span>
+          <div class="min-w-0">
+            <p>Compile o SQLite, só na primeira vez.</p>
+            <pre class="mt-2 px-4 py-3 rounded-md bg-painel border border-borda overflow-x-auto font-mono text-[14px]"><code>gcc -c códigos/sqlite3.c -o sqlite3.o</code></pre>
+          </div>
+        </li>
+        <li class="grid grid-cols-[2.25rem_1fr] gap-3">
+          <span class="w-9 h-9 rounded-full border border-borda flex items-center justify-center font-mono text-[15px] text-suave" aria-hidden="true">3</span>
+          <div class="min-w-0">
+            <p>Compile e rode a interface, com o comando do seu sistema.</p>
+            <p class="mt-3 text-[15px] text-suave">Windows (PowerShell)</p>
+            <pre class="mt-1.5 px-4 py-3 rounded-md bg-painel border border-borda overflow-x-auto font-mono text-[14px]"><code>g++ -std=c++11 -D_WIN32_WINNT=0x0A00 códigos/servidor.cpp sqlite3.o -lws2_32 -o servidor.exe
+.\servidor.exe</code></pre>
+            <p class="mt-3 text-[15px] text-suave">Linux</p>
+            <pre class="mt-1.5 px-4 py-3 rounded-md bg-painel border border-borda overflow-x-auto font-mono text-[14px]"><code>g++ -std=c++11 códigos/servidor.cpp sqlite3.o -ldl -lpthread -o servidor
+./servidor</code></pre>
+            <p class="mt-3 text-[15px] text-suave">macOS</p>
+            <pre class="mt-1.5 px-4 py-3 rounded-md bg-painel border border-borda overflow-x-auto font-mono text-[14px]"><code>g++ -std=c++11 códigos/servidor.cpp sqlite3.o -o servidor
+./servidor</code></pre>
+          </div>
+        </li>
+        <li class="grid grid-cols-[2.25rem_1fr] gap-3">
+          <span class="w-9 h-9 rounded-full border border-borda flex items-center justify-center font-mono text-[15px] text-suave" aria-hidden="true">4</span>
+          <div class="min-w-0">
+            <p>Abra <span class="font-mono text-[15px] text-link">http://localhost:8080</span> no navegador.</p>
+          </div>
+        </li>
+      </ol>
+      <p class="mt-8 text-[#C9D1DB]">Os comandos de cada sistema, o menu no terminal e as soluções para problemas comuns estão no <a href="https://github.com/LucasGuerraProcopio/Biblioteca-de-jogos-EDOO#readme" class="text-link underline underline-offset-4 hover:text-texto">README do repositório</a>.</p>
+    </section>
+
+    <!-- equipe -->
+    <section id="equipe" class="max-w-6xl mx-auto px-5 pt-24 pb-24">
+      <h2 class="text-3xl font-semibold tracking-[-0.01em]">Equipe</h2>
+      <ul class="mt-6 flex flex-col gap-2 text-xl">
+        <li>Lucas Guerra Procópio</li>
+        <li>Gabriel Costa Romeiro dos Santos</li>
+        <li>Eduardo Cabral Cordeiro dos Santos</li>
+      </ul>
+      <p class="mt-8 max-w-[42rem] text-suave">CIN0135 Estruturas de Dados Orientadas a Objetos, Centro de Informática da UFPE, semestre 2026.2. Professor Francisco Paulo Magalhães Simões.</p>
+    </section>
+  </main>
+
+  <footer class="border-t border-linha">
+    <div class="max-w-6xl mx-auto px-5 py-6 flex flex-wrap justify-between gap-3 text-[15px] text-suave">
+      <span>Biblioteca de Jogos, 2026</span>
+      <a href="https://github.com/LucasGuerraProcopio/Biblioteca-de-jogos-EDOO" class="hover:text-texto">Código no GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>
